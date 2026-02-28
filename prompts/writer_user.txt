@@ -1,0 +1,16 @@
+ТЕМА ПРЕЗЕНТАЦИИ: ${topic}
+
+ПЛАН ПРЕЗЕНТАЦИИ (контекст):
+${plan_context}
+
+ТВОЙ СЛАЙД:
+  Тип:    ${slide_type}
+  Задача: ${purpose}
+  (${description})
+
+КЛЮЧИ ДЛЯ ЗАПОЛНЕНИЯ (верни их все в "replacements"):
+${fields_lines}
+
+List-ключи этого слайда (ожидают массив): ${list_fields_str}
+${list_hint}
+Верни JSON с ключом "replacements".

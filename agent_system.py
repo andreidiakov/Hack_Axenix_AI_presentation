@@ -6,7 +6,7 @@
   2. WriterAgent   — генерирует контент каждого слайда (вызывается N раз)
   3. Assembler     — собирает итоговый content.json
 
-Вход  : тема (строка)
+Вход  : тема (строка) + динамическая структура шаблона (из template_parser)
 Выход : content.json → затем передаётся в generation_pres.py
 """
 
@@ -14,6 +14,7 @@ import json
 import re
 import logging
 from pathlib import Path
+from string import Template
 import httpx
 from openai import OpenAI
 
@@ -36,12 +37,19 @@ client = OpenAI(
 MODEL_NAME = "/model"
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+DATA_DIR    = Path(__file__).parent / "data"
 
 
-def load_prompt(filename: str) -> str:
+def load_prompt(filename: str, **kwargs) -> str:
+    """
+    Загружает промпт из файла.
+    Если переданы kwargs — подставляет переменные через string.Template.
+    Использует safe_substitute: незаполненные ${var} остаются как есть.
+    """
     path = PROMPTS_DIR / filename
-    log.debug(f"Загружаю промпт: {path}")
-    return path.read_text(encoding="utf-8").strip()
+    log.debug(f"Загружаю промпт: {filename}")
+    text = path.read_text(encoding="utf-8").strip()
+    return Template(text).safe_substitute(**kwargs) if kwargs else text
 
 
 def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7) -> str:
@@ -67,165 +75,89 @@ def parse_json_safe(raw: str) -> dict | list:
         raise
 
 
-# ── Схема слайдов ─────────────────────────────────────────────────────────────
+# ── Конвертация динамической структуры в схему агентов ────────────────────────
 
-SLIDE_SCHEMA: dict[str, dict] = {
-    "TITLE": {
-        "description": "Титульный слайд. Название и подзаголовок.",
-        "fields": {
-            "{{TITLE_TITLE}}": "string — главный заголовок (≤8 слов)",
-            "{{SUBTITLE}}":    "string — подзаголовок / автор / дата",
-        },
-        "list_fields": [],
-    },
-    "BULLETS_6": {
-        "description": "Слайд с шестью тезисами/фактами.",
-        "fields": {
-            "{{TITLE_BULLETS_6}}": "string — заголовок слайда",
-            "{{BULLET_1}}":        "string — тезис 1",
-            "{{BULLET_2}}":        "string — тезис 2",
-            "{{BULLET_3}}":        "string — тезис 3",
-            "{{BULLET_4}}":        "string — тезис 4",
-            "{{BULLET_5}}":        "string — тезис 5",
-            "{{BULLET_6}}":        "string — тезис 6",
-        },
-        "list_fields": [],
-    },
-    "BULLETS_4": {
-        "description": "Слайд с четырьмя ключевыми тезисами.",
-        "fields": {
-            "{{TITLE_BULLETS_4}}": "string — заголовок слайда",
-            "{{BULLET_1}}":        "string — тезис 1",
-            "{{BULLET_2}}":        "string — тезис 2",
-            "{{BULLET_3}}":        "string — тезис 3",
-            "{{BULLET_4}}":        "string — тезис 4",
-        },
-        "list_fields": [],
-    },
-    "COMPARE": {
-        "description": "Сравнительный слайд: левая и правая колонки.",
-        "fields": {
-            "{{TITLE_COMPARE}}": "string — заголовок слайда",
-            "{{LEFT_TITLE}}":    "string — заголовок левой колонки",
-            "{{LEFT_ITEMS}}":    "list   — пункты левой колонки",
-            "{{RIGHT_TITLE}}":   "string — заголовок правой колонки",
-            "{{RIGHT_ITEMS}}":   "list   — пункты правой колонки",
-        },
-        "list_fields": ["{{LEFT_ITEMS}}", "{{RIGHT_ITEMS}}"],
-    },
-    "LEFT_TEXT": {
-        "description": "Слайд с заголовком и развёрнутым текстом слева.",
-        "fields": {
-            "{{TITLE_LEFT_TEXT}}": "string — заголовок слайда",
-            "{{ITEMS}}":           "list   — текстовые пункты",
-        },
-        "list_fields": ["{{ITEMS}}"],
-    },
-    "RIGHT_TEXT": {
-        "description": "Слайд с заголовком и развёрнутым текстом справа.",
-        "fields": {
-            "{{TITLE_RIGHT_TEXT}}": "string — заголовок слайда",
-            "{{ITEMS}}":            "list   — текстовые пункты",
-        },
-        "list_fields": ["{{ITEMS}}"],
-    },
-    "THREE_COLUMNS": {
-        "description": "Три колонки — структура, сравнение или три аспекта.",
-        "fields": {
-            "{{TITLE_THREE_COLUMNS}}": "string — заголовок слайда",
-            "{{SUBTITLE_COLUMN_1}}":   "string — заголовок колонки 1",
-            "{{SUBTITLE_COLUMN_2}}":   "string — заголовок колонки 2",
-            "{{SUBTITLE_COLUMN_3}}":   "string — заголовок колонки 3",
-            "{{ITEM_COLUMN_1}}":       "string — текст колонки 1",
-            "{{ITEM_COLUMN_2}}":       "string — текст колонки 2",
-            "{{ITEM_COLUMN_3}}":       "string — текст колонки 3",
-        },
-        "list_fields": [],
-    },
-    "TIMELINE": {
-        "description": "Временная шкала с пятью этапами/точками.",
-        "fields": {
-            "{{TITLE_TIMELINE}}": "string — заголовок слайда",
-            "{{POINT_1}}":        "string — этап 1",
-            "{{POINT_2}}":        "string — этап 2",
-            "{{POINT_3}}":        "string — этап 3",
-            "{{POINT_4}}":        "string — этап 4",
-            "{{POINT_5}}":        "string — этап 5",
-        },
-        "list_fields": [],
-    },
-    "CLOSE": {
-        "description": "Завершающий слайд: благодарность / призыв к действию.",
-        "fields": {
-            "{{TITLE_CLOSE}}": "string — финальный заголовок",
-            "{{SUBTITLE}}":    "string — подзаголовок / контакты",
-        },
-        "list_fields": [],
-    },
-}
+def structure_to_schema(structure: dict) -> dict:
+    """
+    Преобразует structure (формат template_parser) в рабочую схему для агентов.
+
+    Вход  (structure["slides"][i]):
+      slide_index, slide_type, description, replacements, list_fields
+
+    Выход (schema[slide_type]):
+      description  : str
+      slide_index  : int        — индекс в шаблоне (для generation_pres)
+      fields       : list[str]  — ключи для замены
+      list_fields  : list[str]  — ключи, ожидающие список буллетов
+    """
+    schema = {}
+    for s in structure.get("slides", []):
+        slide_type = s["slide_type"]
+        schema[slide_type] = {
+            "description": s.get("description", ""),
+            "slide_index": s["slide_index"],
+            "fields":      list(s.get("replacements", {}).keys()),
+            "list_fields": s.get("list_fields", []),
+        }
+    return schema
 
 
 # ── Agent 1: PlannerAgent ─────────────────────────────────────────────────────
 
-def run_planner(topic: str) -> list[dict]:
+def run_planner(topic: str, schema: dict) -> list[dict]:
     log.info("PlannerAgent: запускаю планирование структуры...")
 
-    system_prompt = load_prompt("planner_system.txt")
-
     types_desc = json.dumps(
-        {k: v["description"] for k, v in SLIDE_SCHEMA.items()},
+        {k: v["description"] for k, v in schema.items()},
         ensure_ascii=False, indent=2,
     )
-    user_prompt = f"""ТЕМА: {topic}
 
-ДОСТУПНЫЕ ТИПЫ СЛАЙДОВ:
-{types_desc}
-
-Составь план презентации."""
+    system_prompt = load_prompt("planner_system.txt")
+    user_prompt   = load_prompt("planner_user.txt", topic=topic, types_desc=types_desc)
 
     raw = call_llm(system_prompt, user_prompt, temperature=0.6)
     log.debug(f"PlannerAgent ответ:\n{raw}")
 
     data = parse_json_safe(raw)
     plan = data.get("plan") or data.get("slides") or []
-    plan = [p for p in plan if p.get("slide_type") in SLIDE_SCHEMA]
+    plan = [p for p in plan if p.get("slide_type") in schema]
 
-    log.info(f"PlannerAgent: получил план из {len(plan)} слайдов")
+    log.info(f"PlannerAgent: план из {len(plan)} слайдов")
     for i, p in enumerate(plan, 1):
-        log.info(f"  {i}. {p['slide_type']:15} — {p['purpose'][:60]}")
+        log.info(f"  {i}. {p['slide_type']:20} — {p['purpose'][:60]}")
 
     return plan
 
 
 # ── Agent 2: WriterAgent ──────────────────────────────────────────────────────
 
-def run_writer(topic: str, plan_context: str, slide_type: str, purpose: str) -> dict:
+def run_writer(topic: str,
+               plan_context: str,
+               slide_type: str,
+               purpose: str,
+               schema: dict) -> dict:
     log.info(f"WriterAgent: генерирую слайд {slide_type} — {purpose[:50]}...")
 
+    slide_info  = schema[slide_type]
+    fields      = slide_info["fields"]
+    list_fields = slide_info["list_fields"]
+
+    fields_lines    = "\n".join(f'  "{k}"' for k in fields)
+    list_hint       = load_prompt("writer_list_format_hint.txt") if list_fields else ""
+    list_fields_str = ", ".join(list_fields) if list_fields else "нет"
+
     system_prompt = load_prompt("writer_system.txt")
-    schema = SLIDE_SCHEMA[slide_type]
-
-    fields_lines = "\n".join(
-        f'  "{k}": {v}' for k, v in schema["fields"].items()
+    user_prompt   = load_prompt(
+        "writer_user.txt",
+        topic           = topic,
+        plan_context    = plan_context,
+        slide_type      = slide_type,
+        purpose         = purpose,
+        description     = slide_info["description"],
+        fields_lines    = fields_lines,
+        list_fields_str = list_fields_str,
+        list_hint       = list_hint,
     )
-    list_hint = load_prompt("list_format_hint.txt") if schema["list_fields"] else ""
-
-    user_prompt = f"""ТЕМА ПРЕЗЕНТАЦИИ: {topic}
-
-ПЛАН ПРЕЗЕНТАЦИИ (контекст):
-{plan_context}
-
-ТВОЙ СЛАЙД:
-  Тип:    {slide_type}
-  Задача: {purpose}
-  ({schema["description"]})
-
-ПОЛЯ ДЛЯ ЗАПОЛНЕНИЯ:
-{fields_lines}
-
-List-поля этого слайда: {schema["list_fields"] if schema["list_fields"] else "нет"}
-{list_hint}
-Верни JSON с ключом "replacements"."""
 
     raw = call_llm(system_prompt, user_prompt, temperature=0.65)
     log.debug(f"WriterAgent ответ для {slide_type}:\n{raw}")
@@ -233,11 +165,11 @@ List-поля этого слайда: {schema["list_fields"] if schema["list_fi
     data = parse_json_safe(raw)
     reps: dict = data.get("replacements", data)
 
-    for key in schema["fields"]:
+    for key in fields:
         if key not in reps:
-            reps[key] = "" if key not in schema["list_fields"] else []
+            reps[key] = [] if key in list_fields else ""
 
-    for key in schema["list_fields"]:
+    for key in list_fields:
         if isinstance(reps.get(key), str):
             text = reps[key].strip()
             reps[key] = [{"type": "bullet", "value": text}] if text else []
@@ -248,13 +180,27 @@ List-поля этого слайда: {schema["list_fields"] if schema["list_fi
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-def generate_content_json(topic: str, output_path: str = "content.json") -> dict:
+def generate_content_json(topic: str,
+                          structure: dict,
+                          output_path: str = None) -> dict:
+    """
+    Полный пайплайн: тема + структура шаблона → content.json.
+
+    structure  — результат template_parser.build_structure()
+    output_path — путь к файлу; по умолчанию data/content.json
+    """
+    if output_path is None:
+        output_path = str(DATA_DIR / "content.json")
+
     log.info(f"{'='*60}")
     log.info(f"Тема: {topic}")
     log.info(f"{'='*60}")
 
+    schema = structure_to_schema(structure)
+    log.info(f"Схема из шаблона: {list(schema.keys())}")
+
     # Шаг 1: Планирование
-    plan = run_planner(topic)
+    plan = run_planner(topic, schema)
     if not plan:
         raise RuntimeError("PlannerAgent вернул пустой план. Проверь соединение с LLM.")
 
@@ -270,8 +216,8 @@ def generate_content_json(topic: str, output_path: str = "content.json") -> dict
     for i, item in enumerate(plan, 1):
         slide_type = item.get("slide_type", "")
         purpose    = item.get("purpose", "")
-        log.info(f"[{i}/{len(plan)}] Обрабатываю слайд {slide_type}")
-        replacements = run_writer(topic, plan_context, slide_type, purpose)
+        log.info(f"[{i}/{len(plan)}] Слайд {slide_type}")
+        replacements = run_writer(topic, plan_context, slide_type, purpose, schema)
         slides_out.append({
             "slide_type":   slide_type,
             "replacements": replacements,
@@ -291,5 +237,12 @@ def generate_content_json(topic: str, output_path: str = "content.json") -> dict
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    TOPIC = "Будущее искусственного интеллекта в образовании"
-    generate_content_json(TOPIC)
+    from template_parser import build_structure
+
+    TOPIC         = "Будущее искусственного интеллекта в образовании"
+    TEMPLATE_PATH = str(DATA_DIR / "template.pptx")
+
+    log.info(f"Анализирую шаблон: {TEMPLATE_PATH}")
+    structure = build_structure(TEMPLATE_PATH, call_llm, load_prompt, parse_json_safe)
+
+    generate_content_json(TOPIC, structure)

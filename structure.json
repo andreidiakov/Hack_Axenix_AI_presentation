@@ -3,14 +3,17 @@
     {
       "slide_index": 0,
       "slide_type": "TITLE",
+      "description": "Титульный слайд с названием и подзаголовком",
       "replacements": {
         "{{TITLE_TITLE}}": "",
         "{{SUBTITLE}}": ""
-      }
+      },
+      "list_fields": []
     },
     {
       "slide_index": 1,
       "slide_type": "BULLETS_6",
+      "description": "Слайд с заголовком и шестью пунктами списка",
       "replacements": {
         "{{TITLE_BULLETS_6}}": "",
         "{{BULLET_1}}": "",
@@ -19,49 +22,66 @@
         "{{BULLET_4}}": "",
         "{{BULLET_5}}": "",
         "{{BULLET_6}}": ""
-      }
+      },
+      "list_fields": []
     },
     {
       "slide_index": 2,
       "slide_type": "BULLETS_4",
+      "description": "Слайд с заголовком и четырьмя пунктами списка",
       "replacements": {
         "{{TITLE_BULLETS_4}}": "",
         "{{BULLET_1}}": "",
         "{{BULLET_2}}": "",
         "{{BULLET_3}}": "",
         "{{BULLET_4}}": ""
-      }
+      },
+      "list_fields": []
     },
     {
       "slide_index": 3,
       "slide_type": "COMPARE",
+      "description": "Слайд сравнения с двумя колонками, заголовками и списками элементов",
       "replacements": {
         "{{TITLE_COMPARE}}": "",
-        "{{LEFT_ITEMS}}": "",
         "{{LEFT_TITLE}}": "",
-        "{{RIGHT_ITEMS}}": "",
-        "{{RIGHT_TITLE}}": ""
-      }
+        "{{LEFT_ITEMS}}": "",
+        "{{RIGHT_TITLE}}": "",
+        "{{RIGHT_ITEMS}}": ""
+      },
+      "list_fields": [
+        "{{LEFT_ITEMS}}",
+        "{{RIGHT_ITEMS}}"
+      ]
     },
     {
       "slide_index": 4,
       "slide_type": "LEFT_TEXT",
+      "description": "Слайд с заголовком и списком элементов, расположенных слева",
       "replacements": {
         "{{TITLE_LEFT_TEXT}}": "",
         "{{ITEMS}}": ""
-      }
+      },
+      "list_fields": [
+        "{{ITEMS}}"
+      ]
     },
     {
       "slide_index": 5,
       "slide_type": "RIGHT_TEXT",
+      "description": "Слайд с заголовком и списком элементов, расположенных справа",
       "replacements": {
         "{{TITLE_RIGHT_TEXT}}": "",
         "{{ITEMS}}": ""
-      }
+      },
+      "list_fields": [
+        "{{ITEMS}}"
+      ]
     },
     {
       "slide_index": 6,
       "slide_type": "THREE_COLUMNS",
+      "description": "Слайд с тремя колонками, каждая имеет подзаголовок и список элементов",
       "replacements": {
         "{{TITLE_THREE_COLUMNS}}": "",
         "{{SUBTITLE_COLUMN_1}}": "",
@@ -70,11 +90,17 @@
         "{{ITEM_COLUMN_1}}": "",
         "{{ITEM_COLUMN_2}}": "",
         "{{ITEM_COLUMN_3}}": ""
-      }
+      },
+      "list_fields": [
+        "{{ITEM_COLUMN_1}}",
+        "{{ITEM_COLUMN_2}}",
+        "{{ITEM_COLUMN_3}}"
+      ]
     },
     {
       "slide_index": 7,
       "slide_type": "TIMELINE",
+      "description": "Слайд с заголовком и пятью точками временной шкалы",
       "replacements": {
         "{{TITLE_TIMELINE}}": "",
         "{{POINT_1}}": "",
@@ -82,15 +108,18 @@
         "{{POINT_3}}": "",
         "{{POINT_4}}": "",
         "{{POINT_5}}": ""
-      }
+      },
+      "list_fields": []
     },
     {
       "slide_index": 8,
       "slide_type": "CLOSE",
+      "description": "Заключительный слайд с заголовком и подзаголовком",
       "replacements": {
         "{{TITLE_CLOSE}}": "",
         "{{SUBTITLE}}": ""
-      }
+      },
+      "list_fields": []
     }
   ]
 }
