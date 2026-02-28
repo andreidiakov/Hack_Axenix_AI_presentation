@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PrezAI — ВШБ</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.12.0/pptxgen.bundle.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Geologica:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -440,6 +439,12 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
     <span class="pill">Track 1</span>
   </div>
 </header>
+
+<!-- Connection status -->
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 20px;">
+  <span class="dot" id="connDot"></span>
+  <span id="connLabel">Проверка соединения...</span>
+</div>
 <!-- REQUIRED hidden fields for existing JS (do not remove) -->
 <input type="hidden" id="apiUrl" value="/api/chat">
 <input type="hidden" id="tempRange" value="0.7">
@@ -521,11 +526,18 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
 </div>
 
 <div class="result-card" id="resultCard">
-  <div class="result-icon">🎓</div>
   <h3 id="resTitle">Презентация готова!</h3>
-  <p id="resMeta">— слайдов · PPTX</p>
-  <div>
-    <button class="btn-dl" id="dlBtn">⬇ Скачать PPTX</button>
+  <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">    
+    <a href="/result.pptx" 
+       download="result.pptx"
+       style="display: inline-block; padding: 12px 26px; 
+              background: #1aa39a; color: white; 
+              text-decoration: none; border-radius: 10px;
+              font-weight: bold; font-size: 16px;
+              border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+      ⬇ Скачать result.pptx
+    </a>
+    
     <button class="btn-reset" onclick="doReset()">↩ Новая</button>
   </div>
   <div class="thumbs" id="thumbs"></div>
@@ -611,18 +623,6 @@ function toggleArch() {
   document.getElementById('archPanel').classList.toggle('open');
 }
 
-// ── Connection ─────────────────────────────────────────────────────────────
-async function checkConn() {
-  const url = '/health';
-  try {
-    const r = await fetch(url, { method:'GET', signal: AbortSignal.timeout(3000) });
-    document.getElementById('connDot').className   = r.ok ? 'dot on' : 'dot';
-    document.getElementById('connLabel').textContent = r.ok ? 'API доступен' : 'ошибка '+r.status;
-  } catch { document.getElementById('connDot').className = 'dot'; document.getElementById('connLabel').textContent = 'недоступен'; }
-}
-setTimeout(checkConn, 800);
-setInterval(checkConn, 30000);
-
 // ── Themes ────────────────────────────────────────────────────────────────
 const THEMES = {
   hse_dark:  { bg:'0a1628', slide:'0d1e38', text:'E8EEF8', accent:'3a7cc7', title_bg:'061020', muted:'5a7a9a' },
@@ -668,7 +668,10 @@ function log(msg, type='active') {
   box.appendChild(d); box.scrollTop = box.scrollHeight;
   logLines.push(d);
 }
-function progress(p) { document.getElementById('pfill').style.width = p + '%'; }
+function progress(p) { 
+  const pfill = document.getElementById('pfill');
+  if (pfill) pfill.style.width = p + '%'; 
+}
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('open');
@@ -691,101 +694,6 @@ function parseResp(data) {
   if (data.text) return Array.isArray(data.text) ? data.text[0] : data.text;
   if (data.generated_text) return data.generated_text;
   return JSON.stringify(data);
-}
-async function buildPptx(slides, opts) {
-  const T   = THEMES[selTheme] || THEMES.hse_dark;
-  const drk = selTheme === 'hse_dark';
-  const W = 10, H = 5.625;
-  const pres = new PptxGenJS();
-  pres.layout = 'LAYOUT_16x9';
-  pres.title  = opts.topic;
-  pres.author = 'PrezAI ВШБ';
-
-  for (let i = 0; i < slides.length; i++) {
-    const s  = slides[i];
-    const sl = pres.addSlide();
-
-    if (s.type === 'title') {
-      sl.background = { color: T.title_bg };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:0.28,h:H, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addShape(pres.ShapeType.rect, { x:0.28,y:2.95,w:W-0.28,h:0.035, fill:{color:'f0c040'}, line:{color:'f0c040'} });
-      sl.addText(s.title||opts.topic, { x:0.55,y:1.1,w:8.8,h:1.7, fontSize:36,bold:true,color:'FFFFFF',fontFace:'Calibri',align:'left',valign:'bottom',margin:0 });
-      if(s.subtitle) sl.addText(s.subtitle, { x:0.55,y:3.1,w:7,h:0.7, fontSize:17,color:'f0c040',fontFace:'Calibri',align:'left',margin:0 });
-      sl.addText(`${i+1}/${slides.length}`, { x:8.6,y:5.2,w:1.2,h:0.3, fontSize:10,color:T.muted,align:'right',margin:0 });
-
-    } else if (s.type === 'section') {
-      sl.background = { color: T.title_bg };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.1, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addText(String(i).padStart(2,'0'), { x:0.5,y:0.6,w:2.5,h:1.5, fontSize:80,color:drk?'1a2e50':'DDDDDD',fontFace:'Calibri',bold:true,margin:0 });
-      sl.addText(s.title, { x:0.5,y:2.2,w:9,h:1.1, fontSize:30,bold:true,color:'FFFFFF',fontFace:'Calibri',margin:0 });
-      if(s.subtitle) sl.addText(s.subtitle, { x:0.5,y:3.4,w:8,h:0.65, fontSize:15,color:'f0c040',fontFace:'Calibri',margin:0 });
-
-    } else if (s.type === 'content') {
-      sl.background = { color: T.slide };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.82, fill:{color:T.title_bg}, line:{color:T.title_bg} });
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0.82,w:W,h:0.035, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addText(s.title, { x:0.5,y:0.1,w:9,h:0.65, fontSize:21,bold:true,color:'FFFFFF',fontFace:'Calibri',valign:'middle',margin:0 });
-      let y = 1.0;
-      if(s.body) { sl.addText(s.body, { x:0.5,y,w:9,h:0.58, fontSize:13,color:drk?'8899bb':'888888',fontFace:'Calibri',italic:true,margin:0 }); y+=0.63; }
-      if(s.bullets?.length) {
-        const items = s.bullets.map((b,j)=>({text:b,options:{bullet:true,breakLine:j<s.bullets.length-1}}));
-        sl.addText(items, { x:0.5,y,w:9,h:H-y-0.28, fontSize:14,color:drk?'D8E8FF':T.text,fontFace:'Calibri',valign:'top',paraSpaceAfter:7,margin:0 });
-      }
-
-    } else if (s.type === 'twoColumn') {
-      sl.background = { color: T.slide };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.82, fill:{color:T.title_bg}, line:{color:T.title_bg} });
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0.82,w:W,h:0.035, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addText(s.title, { x:0.5,y:0.1,w:9,h:0.65, fontSize:21,bold:true,color:'FFFFFF',fontFace:'Calibri',margin:0 });
-      sl.addShape(pres.ShapeType.rect, { x:4.88,y:1.0,w:0.035,h:4.35, fill:{color:T.accent}, line:{color:T.accent} });
-      if(s.left) sl.addText(s.left, { x:0.4,y:1.0,w:4.2,h:0.55, fontSize:15,bold:true,color:'f0c040',fontFace:'Calibri',margin:0 });
-      if(s.leftBullets?.length) { const it=s.leftBullets.map((b,j)=>({text:b,options:{bullet:true,breakLine:j<s.leftBullets.length-1}})); sl.addText(it,{x:0.4,y:1.6,w:4.2,h:3.6,fontSize:12,color:drk?'D8E8FF':T.text,fontFace:'Calibri',paraSpaceAfter:5,margin:0}); }
-      if(s.right) sl.addText(s.right, { x:5.1,y:1.0,w:4.5,h:0.55, fontSize:15,bold:true,color:'f0c040',fontFace:'Calibri',margin:0 });
-      if(s.rightBullets?.length) { const it=s.rightBullets.map((b,j)=>({text:b,options:{bullet:true,breakLine:j<s.rightBullets.length-1}})); sl.addText(it,{x:5.1,y:1.6,w:4.5,h:3.6,fontSize:12,color:drk?'D8E8FF':T.text,fontFace:'Calibri',paraSpaceAfter:5,margin:0}); }
-
-    } else if (s.type === 'bigstat') {
-      sl.background = { color: T.slide };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.82, fill:{color:T.title_bg}, line:{color:T.title_bg} });
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0.82,w:W,h:0.035, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addText(s.title, { x:0.5,y:0.1,w:9,h:0.65, fontSize:21,bold:true,color:'FFFFFF',fontFace:'Calibri',margin:0 });
-      sl.addText(s.stat||'—', { x:1,y:1.3,w:8,h:2.0, fontSize:96,bold:true,color:'f0c040',fontFace:'Calibri',align:'center',margin:0 });
-      if(s.statLabel) sl.addText(s.statLabel, { x:1,y:3.4,w:8,h:0.7, fontSize:19,color:drk?'AABBCC':T.muted,fontFace:'Calibri',align:'center',margin:0 });
-      if(s.body) sl.addText(s.body, { x:1.5,y:4.2,w:7,h:0.65, fontSize:12,color:drk?'667799':T.muted,fontFace:'Calibri',align:'center',italic:true,margin:0 });
-
-    } else if (s.type === 'quote') {
-      sl.background = { color: T.title_bg };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:0.32,h:H, fill:{color:'f0c040'}, line:{color:'f0c040'} });
-      sl.addText('\u275d', { x:0.65,y:0.35,w:2.5,h:1.5, fontSize:90,color:T.accent,fontFace:'Calibri',align:'left',margin:0 });
-      sl.addText(s.quote||s.body||'', { x:0.65,y:1.5,w:9,h:2.6, fontSize:21,italic:true,color:'FFFFFF',fontFace:'Calibri',align:'left',valign:'top',margin:0 });
-      if(s.quoteAuthor) sl.addText('— '+s.quoteAuthor, { x:0.65,y:4.35,w:8,h:0.6, fontSize:14,color:'f0c040',fontFace:'Calibri',bold:true,margin:0 });
-
-    } else if (s.type === 'timeline') {
-      sl.background = { color: T.slide };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.82, fill:{color:T.title_bg}, line:{color:T.title_bg} });
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0.82,w:W,h:0.035, fill:{color:T.accent}, line:{color:T.accent} });
-      sl.addText(s.title, { x:0.5,y:0.1,w:9,h:0.65, fontSize:21,bold:true,color:'FFFFFF',fontFace:'Calibri',margin:0 });
-      sl.addShape(pres.ShapeType.rect, { x:0.5,y:2.62,w:9,h:0.04, fill:{color:T.accent}, line:{color:T.accent} });
-      const tl=(s.timelineItems||[]).slice(0,5); const cw=9/Math.max(tl.length,1);
-      tl.forEach((item,j)=>{ const cx=0.5+j*cw+cw/2-0.1; sl.addShape(pres.ShapeType.ellipse,{x:cx-0.1,y:2.53,w:0.18,h:0.18,fill:{color:'f0c040'},line:{color:'f0c040'}}); sl.addText(item.year||'',{x:cx-cw/2,y:1.88,w:cw,h:0.55,fontSize:14,bold:true,color:'f0c040',fontFace:'Calibri',align:'center',margin:0}); sl.addText(item.event||'',{x:cx-cw/2,y:2.84,w:cw,h:2.0,fontSize:11,color:drk?'D8E8FF':T.text,fontFace:'Calibri',align:'center',valign:'top',margin:0}); });
-
-    } else if (s.type === 'closing') {
-      sl.background = { color: T.title_bg };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.2, fill:{color:'f0c040'}, line:{color:'f0c040'} });
-      sl.addShape(pres.ShapeType.rect, { x:0,y:H-0.2,w:W,h:0.2, fill:{color:'f0c040'}, line:{color:'f0c040'} });
-      sl.addText(s.title||'Спасибо за внимание', { x:0.5,y:1.45,w:9,h:1.5, fontSize:34,bold:true,color:'FFFFFF',fontFace:'Calibri',align:'center',valign:'middle',margin:0 });
-      if(s.body) sl.addText(s.body, { x:1,y:3.1,w:8,h:0.9, fontSize:16,color:'f0c040',fontFace:'Calibri',align:'center',margin:0 });
-    } else {
-      sl.background = { color: T.slide };
-      sl.addShape(pres.ShapeType.rect, { x:0,y:0,w:W,h:0.82, fill:{color:T.title_bg}, line:{color:T.title_bg} });
-      sl.addText(s.title||'', { x:0.5,y:0.1,w:9,h:0.65, fontSize:21,bold:true,color:'FFFFFF',fontFace:'Calibri',margin:0 });
-      const txt=s.body||(s.bullets?s.bullets.join('\n'):'');
-      if(txt) sl.addText(txt,{x:0.5,y:1.1,w:9,h:4.1,fontSize:14,color:drk?'D8E8FF':T.text,fontFace:'Calibri',valign:'top',margin:0});
-    }
-
-    if(s.speakerNotes) sl.addNotes(s.speakerNotes);
-    if(s.type!=='title') sl.addText(String(i+1),{x:9.55,y:5.22,w:0.35,h:0.28,fontSize:9,color:T.muted,align:'right',margin:0});
-  }
-  return pres;
 }
 async function generate() {
   const topic    = document.getElementById('topic').value.trim();
@@ -844,49 +752,50 @@ async function generate() {
     catch { const m=raw.match(/\[[\s\S]*\]/); if(m) slides=JSON.parse(m[0]); else throw new Error('Не удалось распарсить JSON:\n'+raw.slice(0,300)); }
 
     if (!slides.length) throw new Error('Модель вернула пустой массив');
-
-    log(`${slides.length} слайдов — строим PPTX…`);
-    progress(70);
-
-    const pres = await buildPptx(slides, opts);
+    // Презентация уже создана на бэкенде
+    log(`Файл получен с сервера`);
     progress(90);
     log('Дизайн ВШБ применён ✓');
 
-    const fname = topic.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 ]/g,'').trim().slice(0,48) + '.pptx';
-    const buf   = await pres.write({ outputType: 'arraybuffer' });
-    pptxBlob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+    if (!window.pptxBlob) {
+      throw new Error('Файл не получен с сервера');
+    }
 
+    const fname = topic.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 ]/g,'').trim().slice(0,48) + '.pptx';
     progress(100);
     log('Готово! 🎉', 'done');
 
-    document.getElementById('connDot').className   = 'dot on';
-    document.getElementById('connLabel').textContent = 'успешно';
-
+    // ПОКАЗЫВАЕМ КРАСНУЮ КНОПКУ
+    const redBtn = document.getElementById('downloadButtonContainer');
+    if (redBtn) {
+      redBtn.style.display = 'block';
+      redBtn.style.animation = 'fadeIn 0.5s';
+    }
+    
     setTimeout(() => {
-      document.getElementById('statusCard').classList.remove('open');
-      document.getElementById('resultCard').classList.add('open');
-      document.getElementById('resTitle').textContent = `Готово — ${slides.length} слайдов`;
-      document.getElementById('resMeta').textContent  = `${slides.length} слайдов · PPTX · ${topic.slice(0,50)}`;
+    document.getElementById('statusCard').classList.remove('open');
+    document.getElementById('resultCard').classList.add('open');
+    document.getElementById('resTitle').textContent = `Готово!`;
+    document.getElementById('resMeta').textContent  = `${slides.length} слайдов · PPTX · ${topic.slice(0,50)}`;
 
-      const T = THEMES[selTheme];
-      const thumbsEl = document.getElementById('thumbs');
-      thumbsEl.innerHTML = '';
-      slides.forEach((s,i) => {
-        const d = document.createElement('div');
-        d.className = 'thumb';
-        d.style.background = '#'+T.slide;
-        d.innerHTML = `<div style="background:#${T.title_bg};color:#fff;width:100%;padding:2px 4px;font-size:5.5px;font-weight:bold">${i+1}. ${(s.title||'').slice(0,16)}</div><div style="padding:2px 4px;font-size:5.5px;color:#${T.muted}">${s.type}</div>`;
-        thumbsEl.appendChild(d);
-      });
+    const T = THEMES[selTheme];
+    const thumbsEl = document.getElementById('thumbs');
+    thumbsEl.innerHTML = '';
+    slides.forEach((s,i) => {
+      const d = document.createElement('div');
+      d.className = 'thumb';
+      d.style.background = '#'+T.slide;
+      d.innerHTML = `<div style="background:#${T.title_bg};color:#fff;width:100%;padding:2px 4px;font-size:5.5px;font-weight:bold">${i+1}. ${(s.title||'').slice(0,16)}</div><div style="padding:2px 4px;font-size:5.5px;color:#${T.muted}">${s.type}</div>`;
+      thumbsEl.appendChild(d);
+    });
 
-      document.getElementById('dlBtn').onclick = () => {
-        const url = URL.createObjectURL(pptxBlob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fname; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 3000);
-      };
-    }, 350);
-
+    document.getElementById('dlBtn').onclick = () => {
+      const url = URL.createObjectURL(pptxBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    };
+  }, 350);
   } catch(err) {
     progress(0);
     log('Ошибка: ' + err.message, 'err');
@@ -906,6 +815,9 @@ function doReset() {
   document.getElementById('topic').value = '';
   document.getElementById('audience').value = '';
   document.getElementById('requirements').value = '';
+
+  const redBtn = document.getElementById('downloadButtonContainer');
+  if (redBtn) redBtn.style.display = 'none';
 }
 (function () {
   const overlay = document.getElementById('genOverlay');
@@ -931,7 +843,6 @@ function doReset() {
 
     return { text, style, theme, slides };
   }
-
   let hijack = false;
   window.fetch = async function (url, options = {}) {
     if (!hijack) return realFetch(url, options);
@@ -956,14 +867,44 @@ function doReset() {
         throw new Error(`Backend /api/chat HTTP ${resp.status}: ${t.slice(0,200)}`);
       }
 
+      // Сохраняем реальный PPTX blob
       const blob = await resp.blob();
       window.pptxBlob = blob;
-      const fakeSlides = [
-        { type: "title", title: "Генерация выполнена", subtitle: "Файл пришёл с backend", speakerNotes: "PPTX получен через /api/chat" },
-        { type: "closing", title: "Готово", body: "Скачай PPTX кнопкой ниже", speakerNotes: "Используется blob от backend" }
+      
+      // Получаем тему для отображения
+      const topic = document.getElementById('topic')?.value?.trim() || 'Презентация';
+      const slidesCount = parseInt(document.getElementById('slidesCount')?.value || '10', 10);
+      
+      // Создаём минимальный JSON для отображения в UI
+      // Но реальный файл уже сохранён в window.pptxBlob
+      const displaySlides = [
+        { 
+          type: "title", 
+          title: topic, 
+          subtitle: "Презентация сгенерирована", 
+          speakerNotes: "Файл получен от сервера" 
+        },
+        { 
+          type: "closing", 
+          title: "Скачайте презентацию", 
+          body: "Нажмите кнопку 'Скачать PPTX'", 
+          speakerNotes: "Реальный файл готов к скачиванию" 
+        }
       ];
-      const fake = { choices: [{ message: { content: JSON.stringify(fakeSlides) } }] };
-      return new Response(JSON.stringify(fake), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      
+      const fakeResponse = { 
+        choices: [{ 
+          message: { 
+            content: JSON.stringify(displaySlides) 
+          } 
+        }] 
+      };
+      
+      return new Response(JSON.stringify(fakeResponse), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+      
     } catch (e) {
       hideOverlay();
       throw e;
@@ -975,25 +916,54 @@ function doReset() {
       hijack = true;
       try {
         const r = await origGenerate();
+        
+        // Если есть реальный PPTX файл
         if (window.pptxBlob) {
-          // Задержка > 350ms чтобы перезаписать onclick, выставленный origGenerate
+          console.log('✅ PPTX файл получен, размер:', window.pptxBlob.size, 'байт');
+          
+          // Сразу показываем результат и настраиваем кнопку скачивания
           setTimeout(() => {
             const dlBtn = document.getElementById('dlBtn');
             const topic = document.getElementById('topic')?.value?.trim() || 'presentation';
             const fname = (topic.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 ]/g,'').trim().slice(0,48) || 'presentation') + '.pptx';
+            
             if (dlBtn) {
-              dlBtn.onclick = () => {
-                const url = URL.createObjectURL(window.pptxBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fname;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 3000);
+              // Убираем все предыдущие обработчики
+              const newDlBtn = dlBtn.cloneNode(true);
+              dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
+              
+              // Устанавливаем обработчик для скачивания реального файла
+              newDlBtn.onclick = (e) => {
+                e.preventDefault();
+                if (window.pptxBlob) {
+                  console.log('📥 Скачивание файла:', fname);
+                  const url = URL.createObjectURL(window.pptxBlob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = fname;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  setTimeout(() => URL.revokeObjectURL(url), 3000);
+                } else {
+                  toast('Файл ещё не готов');
+                }
               };
+              
+              // Обновляем информацию в UI
+              document.getElementById('resMeta').textContent = 
+                `✅ Файл готов · ${(window.pptxBlob.size / 1024).toFixed(0)} KB`;
             }
-          }, 500);
+          }, 100);
+        } else {
+          console.warn('⚠️ PPTX blob не найден');
         }
+        
         return r;
+      } catch (error) {
+        console.error('Generation error:', error);
+        toast('Ошибка генерации: ' + error.message);
+        throw error;
       } finally {
         hijack = false;
         hideOverlay();
@@ -1001,6 +971,16 @@ function doReset() {
     };
   }
 })();
+
+// Добавляем стиль для анимации
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+document.head.appendChild(style);
 </script>
 </body>
 </html>

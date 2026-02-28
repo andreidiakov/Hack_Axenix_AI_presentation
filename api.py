@@ -150,6 +150,16 @@ def static_file(filename: str):
         return FileResponse(str(path))
     raise HTTPException(status_code=404, detail="Not found")
 
+@app.get("/download")
+async def download_file():
+    file_path = BASE_DIR / "result.pptx"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    return FileResponse(
+        path=file_path,
+        filename="result.pptx",
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
 
 # ── Entry point ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
