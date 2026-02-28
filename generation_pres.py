@@ -373,9 +373,10 @@ def build_presentation(template_path: str,
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
-build_presentation(
-    template_path  = 'test.pptx',
-    structure_path = 'structure.json',
-    content_path   = 'content.json',
-    output_path    = 'result.pptx',
-)
+if __name__ == '__main__':
+    build_presentation(
+        template_path  = 'test.pptx',
+        structure_path = 'structure.json',
+        content_path   = 'content.json',
+        output_path    = 'result.pptx',
+    )
