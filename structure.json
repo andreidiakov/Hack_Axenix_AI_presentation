@@ -1,0 +1,96 @@
+{
+  "slides": [
+    {
+      "slide_index": 0,
+      "slide_type": "TITLE",
+      "replacements": {
+        "{{TITLE_TITLE}}": "",
+        "{{SUBTITLE}}": ""
+      }
+    },
+    {
+      "slide_index": 1,
+      "slide_type": "BULLETS_6",
+      "replacements": {
+        "{{TITLE_BULLETS_6}}": "",
+        "{{BULLET_1}}": "",
+        "{{BULLET_2}}": "",
+        "{{BULLET_3}}": "",
+        "{{BULLET_4}}": "",
+        "{{BULLET_5}}": "",
+        "{{BULLET_6}}": ""
+      }
+    },
+    {
+      "slide_index": 2,
+      "slide_type": "BULLETS_4",
+      "replacements": {
+        "{{TITLE_BULLETS_4}}": "",
+        "{{BULLET_1}}": "",
+        "{{BULLET_2}}": "",
+        "{{BULLET_3}}": "",
+        "{{BULLET_4}}": ""
+      }
+    },
+    {
+      "slide_index": 3,
+      "slide_type": "COMPARE",
+      "replacements": {
+        "{{TITLE_COMPARE}}": "",
+        "{{LEFT_ITEMS}}": "",
+        "{{LEFT_TITLE}}": "",
+        "{{RIGHT_ITEMS}}": "",
+        "{{RIGHT_TITLE}}": ""
+      }
+    },
+    {
+      "slide_index": 4,
+      "slide_type": "LEFT_TEXT",
+      "replacements": {
+        "{{TITLE_LEFT_TEXT}}": "",
+        "{{ITEMS}}": ""
+      }
+    },
+    {
+      "slide_index": 5,
+      "slide_type": "RIGHT_TEXT",
+      "replacements": {
+        "{{TITLE_RIGHT_TEXT}}": "",
+        "{{ITEMS}}": ""
+      }
+    },
+    {
+      "slide_index": 6,
+      "slide_type": "THREE_COLUMNS",
+      "replacements": {
+        "{{TITLE_THREE_COLUMNS}}": "",
+        "{{SUBTITLE_COLUMN_1}}": "",
+        "{{SUBTITLE_COLUMN_2}}": "",
+        "{{SUBTITLE_COLUMN_3}}": "",
+        "{{ITEM_COLUMN_1}}": "",
+        "{{ITEM_COLUMN_2}}": "",
+        "{{ITEM_COLUMN_3}}": ""
+      }
+    },
+    {
+      "slide_index": 7,
+      "slide_type": "TIMELINE",
+      "replacements": {
+        "{{TITLE_TIMELINE}}": "",
+        "{{POINT_1}}": "",
+        "{{POINT_2}}": "",
+        "{{POINT_3}}": "",
+        "{{POINT_4}}": "",
+        "{{POINT_5}}": ""
+      }
+    },
+    {
+      "slide_index": 8,
+      "slide_type": "CLOSE",
+      "replacements": {
+        "{{TITLE_CLOSE}}": "",
+        "{{SUBTITLE}}": ""
+      }
+    }
+  ]
+}
