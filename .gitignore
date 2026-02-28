@@ -1,0 +1,26 @@
+# Секреты
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# Временные / output файлы
+result.pptx
+template.pptx
+content.json
+structure.json
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

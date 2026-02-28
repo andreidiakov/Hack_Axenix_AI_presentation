@@ -94,7 +94,16 @@ def _run_pipeline(req: GenerateRequest, workdir: Path) -> bytes:
         output_path    = str(output_path),
     )
 
-    return output_path.read_bytes()
+    pptx_bytes = output_path.read_bytes()
+
+    # Сохраняем копии в рабочую директорию проекта для отладки
+    import shutil
+    shutil.copy(content_path,   str(BASE_DIR / "content.json"))
+    shutil.copy(structure_path, str(BASE_DIR / "structure.json"))
+    (BASE_DIR / "result.pptx").write_bytes(pptx_bytes)
+    log.info(f"[{tag}] Файлы сохранены локально: result.pptx, content.json, structure.json")
+
+    return pptx_bytes
 
 
 # ── Эндпоинты ───────────────────────────────────────────────────────────────────

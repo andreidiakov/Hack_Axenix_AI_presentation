@@ -976,19 +976,22 @@ function doReset() {
       try {
         const r = await origGenerate();
         if (window.pptxBlob) {
-          const dlBtn = document.getElementById('dlBtn');
-          const topic = document.getElementById('topic')?.value?.trim() || 'presentation';
-          const fname = (topic.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 ]/g,'').trim().slice(0,48) || 'presentation') + '.pptx';
-          if (dlBtn) {
-            dlBtn.onclick = () => {
-              const url = URL.createObjectURL(window.pptxBlob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = fname;
-              a.click();
-              setTimeout(() => URL.revokeObjectURL(url), 3000);
-            };
-          }
+          // Задержка > 350ms чтобы перезаписать onclick, выставленный origGenerate
+          setTimeout(() => {
+            const dlBtn = document.getElementById('dlBtn');
+            const topic = document.getElementById('topic')?.value?.trim() || 'presentation';
+            const fname = (topic.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 ]/g,'').trim().slice(0,48) || 'presentation') + '.pptx';
+            if (dlBtn) {
+              dlBtn.onclick = () => {
+                const url = URL.createObjectURL(window.pptxBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fname;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 3000);
+              };
+            }
+          }, 500);
         }
         return r;
       } finally {
