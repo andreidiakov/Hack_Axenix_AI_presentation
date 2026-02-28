@@ -10,13 +10,19 @@
 Выход : content.json → затем передаётся в generation_pres.py
 """
 
+import concurrent.futures
 import json
-import re
 import logging
+import os
+import re
 from pathlib import Path
 from string import Template
+
 import httpx
+from dotenv import load_dotenv
 from openai import OpenAI
+
+load_dotenv()
 
 # ── Логирование ────────────────────────────────────────────────────────────────
 
@@ -29,12 +35,16 @@ log = logging.getLogger(__name__)
 
 # ── LLM client ────────────────────────────────────────────────────────────────
 
+_LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://172.28.4.29:8000/v1")
+_LLM_API_KEY  = os.getenv("LLM_API_KEY", "dummy")
+_LLM_TIMEOUT  = float(os.getenv("LLM_TIMEOUT", "600"))
+MODEL_NAME    = os.getenv("LLM_MODEL", "/model")
+
 client = OpenAI(
-    base_url="http://172.28.4.29:8000/v1",
-    api_key="dummy",
-    timeout=httpx.Timeout(timeout=600.0, connect=60.0),
+    base_url=_LLM_BASE_URL,
+    api_key=_LLM_API_KEY,
+    timeout=httpx.Timeout(timeout=_LLM_TIMEOUT, connect=min(60.0, _LLM_TIMEOUT)),
 )
-MODEL_NAME = "/model"
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 DATA_DIR    = Path(__file__).parent / "data"
@@ -119,8 +129,12 @@ def run_planner(topic: str, schema: dict) -> list[dict]:
     log.debug(f"PlannerAgent ответ:\n{raw}")
 
     data = parse_json_safe(raw)
+    MAX_SLIDES = 9
     plan = data.get("plan") or data.get("slides") or []
     plan = [p for p in plan if p.get("slide_type") in schema]
+    if len(plan) > MAX_SLIDES:
+        log.warning(f"PlannerAgent вернул {len(plan)} слайдов, обрезаю до {MAX_SLIDES}")
+        plan = plan[:MAX_SLIDES]
 
     log.info(f"PlannerAgent: план из {len(plan)} слайдов")
     for i, p in enumerate(plan, 1):
@@ -129,7 +143,7 @@ def run_planner(topic: str, schema: dict) -> list[dict]:
     return plan
 
 
-# ── Agent 2: WriterAgent ──────────────────────────────────────────────────────
+# ── Agent 2: WriterAgent ─────────────────────────────────────────���────────────
 
 def run_writer(topic: str,
                plan_context: str,
@@ -209,19 +223,20 @@ def generate_content_json(topic: str,
         for i, p in enumerate(plan, 1)
     )
 
-    # Шаг 2: Генерация контента слайдов
-    log.info(f"WriterAgent: начинаю генерацию {len(plan)} слайдов...")
-    slides_out = []
+    # Шаг 2: Параллельная генерация контента слайдов
+    log.info(f"WriterAgent: параллельная генерация {len(plan)} слайдов...")
 
-    for i, item in enumerate(plan, 1):
+    def _write_one(args):
+        i, item = args
         slide_type = item.get("slide_type", "")
         purpose    = item.get("purpose", "")
         log.info(f"[{i}/{len(plan)}] Слайд {slide_type}")
         replacements = run_writer(topic, plan_context, slide_type, purpose, schema)
-        slides_out.append({
-            "slide_type":   slide_type,
-            "replacements": replacements,
-        })
+        return {"slide_type": slide_type, "replacements": replacements}
+
+    n_workers = min(len(plan), 5)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as pool:
+        slides_out = list(pool.map(_write_one, enumerate(plan, 1)))
 
     # Шаг 3: Сборка content.json
     log.info(f"Assembler: записываю {output_path}...")

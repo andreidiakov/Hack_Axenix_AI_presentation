@@ -1,0 +1,7 @@
+ТЕМА: ${topic}
+${style_hint}${theme_hint}${extra_prompt}
+КОНТЕКСТ ПРЕЗЕНТАЦИИ:
+${content_summary}
+
+ДОСТУПНЫЕ ШАБЛОНЫ:
+${templates_block}

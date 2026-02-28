@@ -1,53 +1,80 @@
 """
-Выбор лучшего шаблона презентации (ссылка на Google Drive) на основе:
-  - content.json (сгенерированного вашим agent_system.py)
-  - Excel-файла со списком доступных шаблонов (link/style/color/description)
+Выбор лучшего шаблона презентации из Google Sheets через LLM.
 
-Результат: печатает В STDOUT ТОЛЬКО выбранную ссылку.
-Если ничего не подходит — печатает fallback-ссылку (задаётся параметром).
+Входные параметры:
+  - topic:        тема презентации
+  - content_text: первичный текст/контент (опционально)
+  - prompt:       дополнительный промт/контекст (опционально)
+  - style:        желаемый стиль (minimalism, GSB, Axenix...) (опционально)
+  - theme:        тема оформления (dark/light) (опционально)
 
-Пример:
-  python template_selector.py \
-    --content content.json \
-    --excel templates.xlsx \
-    --fallback "https://drive.google.com/...." \
-    --topic "Будущее искусственного интеллекта в образовании"
+Список шаблонов берётся из Google Sheets (TEMPLATES_SHEET_URL в .env).
+Формат таблицы: link | style | theme | num_slides | description
+
+Экспортирует:
+  select_template(...) -> str   # URL выбранного шаблона
+
+CLI:
+  python template_selector.py --topic "..." [--style minimalism] [--theme dark]
 """
 
-import argparse
+import io
 import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from string import Template
+from typing import Any, Dict, List, Optional
 
 import httpx
 import pandas as pd
+import requests
+from dotenv import load_dotenv
 from openai import OpenAI
 
-# ── Логирование ────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
+load_dotenv()
+
 log = logging.getLogger(__name__)
 
-# ── LLM client (как у вас) ─────────────────────────────────────────────────────
-def build_client(base_url: str, api_key: str, timeout_s: float) -> OpenAI:
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+# ── Конфиг из .env ─────────────────────────────────────────────────────────────
+LLM_BASE_URL        = os.getenv("LLM_BASE_URL", "http://172.28.4.29:8000/v1")
+LLM_API_KEY         = os.getenv("LLM_API_KEY", "dummy")
+LLM_MODEL           = os.getenv("LLM_MODEL", "/model")
+LLM_TIMEOUT         = float(os.getenv("LLM_TIMEOUT", "600"))
+TEMPLATES_SHEET_URL = os.getenv("TEMPLATES_SHEET_URL", "")
+FALLBACK_URL        = os.getenv("FALLBACK_TEMPLATE_URL", "")
+
+
+# ── LLM client ─────────────────────────────────────────────────────────────────
+def _build_client() -> OpenAI:
     return OpenAI(
-        base_url=base_url,
-        api_key=api_key,
-        timeout=httpx.Timeout(timeout=timeout_s, connect=min(60.0, timeout_s)),
+        base_url=LLM_BASE_URL,
+        api_key=LLM_API_KEY,
+        timeout=httpx.Timeout(timeout=LLM_TIMEOUT, connect=min(60.0, LLM_TIMEOUT)),
     )
 
-# ── Utils ──────────────────────────────────────────────────────────────────────
-def parse_json_safe(raw: str) -> Any:
-    """
-    Пытается извлечь JSON:
-      - либо raw целиком JSON
-      - либо JSON внутри ```json ... ```
-    """
+
+# ── Промты ─────────────────────────────────────────────────────────────────────
+def _load_prompt(filename: str, **kwargs) -> str:
+    path = PROMPTS_DIR / filename
+    text = path.read_text(encoding="utf-8").strip()
+    return Template(text).safe_substitute(**kwargs) if kwargs else text
+
+
+# ── Utils ───────────────────────────────────────────────────────────────────────
+def _normalize(x: Any) -> str:
+    return str(x).strip() if x is not None else ""
+
+
+def _is_url(s: str) -> bool:
+    s = s.strip()
+    return s.startswith("http://") or s.startswith("https://")
+
+
+def _parse_json(raw: str) -> Any:
     raw = raw.strip()
     try:
         return json.loads(raw)
@@ -55,247 +82,193 @@ def parse_json_safe(raw: str) -> Any:
         match = re.search(r"```(?:json)?\s*([\s\S]+?)```", raw)
         if match:
             return json.loads(match.group(1).strip())
-        # иногда модель возвращает просто ссылку — обработаем отдельно выше
         raise
 
-def normalize_str(x: Any) -> str:
-    return str(x).strip() if x is not None else ""
 
-def first_nonempty(*vals: Any) -> str:
-    for v in vals:
-        s = normalize_str(v)
-        if s:
-            return s
-    return ""
+# ── Загрузка таблицы из Google Sheets ──────────────────────────────────────────
+def _extract_sheet_id(url: str) -> str:
+    match = re.search(r"/spreadsheets/d/([a-zA-Z0-9_-]+)", url)
+    if not match:
+        raise ValueError(f"Не удалось извлечь ID таблицы из ссылки: {url}")
+    return match.group(1)
 
-def looks_like_url(s: str) -> bool:
-    s = s.strip()
-    return s.startswith("http://") or s.startswith("https://")
 
-def extract_first_url(text: str) -> Optional[str]:
-    m = re.search(r"(https?://\S+)", text)
-    return m.group(1).rstrip(").,;\"'") if m else None
+def _download_templates_df(sheets_url: str) -> pd.DataFrame:
+    sheet_id = _extract_sheet_id(sheets_url)
+    export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
+    log.info("Скачиваю список шаблонов из Google Sheets...")
+    resp = requests.get(export_url, timeout=30)
+    resp.raise_for_status()
+    return pd.read_csv(io.StringIO(resp.text))
 
-# ── Excel reading ──────────────────────────────────────────────────────────────
-COL_ALIASES = {
-    "link",
-    "style",
-    "theme" ,
-    "description"
-    }
 
-def detect_columns(df: pd.DataFrame) -> Dict[str, str]:
-    cols_lower = {c.lower().strip(): c for c in df.columns}
-    detected: Dict[str, str] = {}
+def _parse_templates(df: pd.DataFrame) -> List[Dict[str, str]]:
+    cols = {c.lower().strip(): c for c in df.columns}
 
-    for key, aliases in COL_ALIASES.items():
-        for a in aliases:
-            if a.lower().strip() in cols_lower:
-                detected[key] = cols_lower[a.lower().strip()]
-                break
+    link_col  = cols.get("link")
+    style_col = cols.get("style")
+    theme_col = cols.get("theme")
+    desc_col  = cols.get("description")
 
-    # link обязателен
-    if "link" not in detected:
-        raise ValueError(
-            "Не найдена колонка со ссылкой. Ожидаю одну из: "
-            + ", ".join(COL_ALIASES["link"])
-        )
-
-    # необязательные
-    for opt in ["style", "color", "description"]:
-        if opt not in detected:
-            detected[opt] = None
-
-    return detected
-
-def read_templates_excel(path: str) -> List[Dict[str, str]]:
-    df = pd.read_excel(path)
-    cols = detect_columns(df)
+    if not link_col:
+        raise ValueError("В таблице не найдена колонка 'link'")
 
     templates: List[Dict[str, str]] = []
     for _, row in df.iterrows():
-        link = normalize_str(row[cols["link"]])
-        if not looks_like_url(link):
+        link = _normalize(row[link_col])
+        if not _is_url(link):
             continue
-
-        style = normalize_str(row[cols["style"]]) if cols["style"] else ""
-        color = normalize_str(row[cols["color"]]) if cols["color"] else ""
-        desc  = normalize_str(row[cols["description"]]) if cols["description"] else ""
-
         templates.append({
-            "link": link,
-            "style": style,
-            "color": color,
-            "description": desc,
+            "link":        link,
+            "style":       _normalize(row[style_col]) if style_col else "",
+            "theme":       _normalize(row[theme_col]) if theme_col else "",
+            "description": _normalize(row[desc_col])  if desc_col  else "",
         })
 
     if not templates:
-        raise ValueError("В Excel не найдено ни одной валидной ссылки (http/https).")
+        raise ValueError("В таблице не найдено ни одной валидной ссылки (http/https).")
 
     return templates
 
-# ── Content summarization ──────────────────────────────────────────────────────
-def summarize_content_json(content: Dict[str, Any], max_chars: int = 8000) -> str:
-    """
-    Делаем компактный контекст для LLM:
-    - типы слайдов
-    - заголовки/ключевые буллеты (если есть)
-    """
-    slides = content.get("slides", [])
-    parts: List[str] = []
-    parts.append(f"Всего слайдов: {len(slides)}")
 
-    for i, s in enumerate(slides, 1):
-        st = normalize_str(s.get("slide_type"))
-        reps = s.get("replacements", {}) or {}
-        # вытащим любые поля, которые выглядят как заголовки/буллеты
-        titles = []
-        bullets = []
-        for k, v in reps.items():
-            kk = k.lower()
-            if "title" in kk:
-                if isinstance(v, str) and v.strip():
-                    titles.append(v.strip())
-            if "bullet" in kk:
-                if isinstance(v, str) and v.strip():
-                    bullets.append(v.strip())
-
-        # list-поля (часто ITEMS/LEFT_ITEMS/RIGHT_ITEMS)
-        for k, v in reps.items():
-            if isinstance(v, list) and v:
-                # поддержим варианты: ["a","b"] или [{"type":"bullet","value":"..."}]
-                extracted = []
-                for item in v[:6]:
-                    if isinstance(item, str):
-                        extracted.append(item.strip())
-                    elif isinstance(item, dict):
-                        val = item.get("value")
-                        if isinstance(val, str) and val.strip():
-                            extracted.append(val.strip())
-                if extracted:
-                    bullets.extend(extracted)
-
-        line = f"{i}. {st}"
-        if titles:
-            line += f" | title: {titles[0]}"
-        if bullets:
-            line += f" | ключевые пункты: " + "; ".join(bullets[:4])
-        parts.append(line)
-
-    out = "\n".join(parts)
-    return out[:max_chars]
-
-# ── LLM selection ──────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """Ты — ассистент, который выбирает лучший шаблон презентации.
-Дано:
-1) Тема/контекст презентации (из content.json)
-2) Список доступных шаблонов (ссылка, стиль, цвет, описание)
-
-Задача:
-- Выбрать ОДНУ лучшую ссылку на шаблон.
-- Если ни один не подходит, вернуть первую в списке.
-
-Правила:
-- Учитывай соответствие теме, тону (minimalism / professional / fun / GSB / Axenix), и цветовой схеме (dark/light).
-- Если в списке есть несколько подходящих — выбирай самый уместный и универсальный для аудитории.
-- Ответ возвращай СТРОГО в JSON:
-  {"selected": "<URL>"}
-- Никакого дополнительного текста.
-"""
-
-def call_llm_select(
+# ── LLM выбор шаблона ──────────────────────────────────────────────────────────
+def _call_llm_select(
     client: OpenAI,
-    model: str,
     topic: str,
     content_summary: str,
     templates: List[Dict[str, str]],
-    temperature: float = 0.2,
-) -> Dict[str, str]:
-    # Ограничим число вариантов, чтобы не раздувать промпт (если Excel большой)
-    # Сначала оставим все, но если очень много — возьмём первые 60.
-    max_templates = 60
-    trimmed = templates[:max_templates]
-
+    style: Optional[str] = None,
+    theme: Optional[str] = None,
+    extra_prompt: Optional[str] = None,
+) -> str:
     templates_block = "\n".join(
-        f"{idx+1}) link: {t['link']}\n   style: {t['style'] or '-'}\n   color: {t['color'] or '-'}\n   description: {t['description'] or '-'}"
-        for idx, t in enumerate(trimmed)
+        f"{i+1}) link: {t['link']}\n   style: {t['style'] or '-'}"
+        f"\n   theme: {t['theme'] or '-'}\n   description: {t['description'] or '-'}"
+        for i, t in enumerate(templates[:60])
     )
 
-    user_prompt = f"""ТЕМА: {topic}
-
-КОНТЕКСТ ИЗ content.json (кратко):
-{content_summary}
-
-ДОСТУПНЫЕ ШАБЛОНЫ:
-{templates_block}
-"""
+    system_prompt = _load_prompt("template_selector_system.txt")
+    user_prompt = _load_prompt(
+        "template_selector_user.txt",
+        topic           = topic,
+        style_hint      = f"Желаемый стиль: {style}\n" if style else "",
+        theme_hint      = f"Желаемая тема оформления: {theme}\n" if theme else "",
+        extra_prompt    = f"Дополнительный контекст: {extra_prompt}\n" if extra_prompt else "",
+        content_summary = content_summary,
+        templates_block = templates_block,
+    )
 
     resp = client.chat.completions.create(
-        model=model,
+        model=LLM_MODEL,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_prompt},
         ],
-        temperature=temperature,
+        temperature=0.2,
     )
     raw = resp.choices[0].message.content.strip()
 
-    # иногда модель может вернуть просто ссылку — подстрахуемся
-    if looks_like_url(raw) and raw.count("{") == 0:
-        return {"selected": raw, "reason": "model_returned_url"}
+    # Иногда модель возвращает просто ссылку
+    if _is_url(raw) and "{" not in raw:
+        return raw
 
-    data = parse_json_safe(raw)
-    selected = normalize_str(data.get("selected"))
-    reason = normalize_str(data.get("reason"))
+    data = _parse_json(raw)
+    return _normalize(data.get("selected", ""))
 
-    return {"selected": selected, "reason": reason}
 
-# ── Main ───────────────────────────────────────────────────────────────────────
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--content", required=True, help="Путь к content.json")
-    ap.add_argument("--excel", required=True, help="Путь к Excel с шаблонами")
-    ap.add_argument("--fallback", required=True, help="Ссылка, которую печатать если NO_MATCH")
-    ap.add_argument("--topic", default="", help="Тема (если не хотите извлекать из контекста)")
-    ap.add_argument("--base-url", default=os.getenv("OPENAI_BASE_URL", "http://172.28.4.29:8000/v1"))
-    ap.add_argument("--api-key", default=os.getenv("OPENAI_API_KEY", "dummy"))
-    ap.add_argument("--model", default=os.getenv("OPENAI_MODEL", "/model"))
-    ap.add_argument("--timeout", type=float, default=600.0)
-    args = ap.parse_args()
+# ── Публичный API ───────────────────────────────────────────────────────────────
+def select_template(
+    topic: str,
+    content_text: str = "",
+    prompt: str = "",
+    style: str = "",
+    theme: str = "",
+    sheets_url: str = "",
+    fallback_url: str = "",
+) -> str:
+    """
+    Выбирает лучший шаблон из Google Sheets через LLM.
 
-    # 1) читаем content.json
-    with open(args.content, "r", encoding="utf-8") as f:
-        content = json.load(f)
+    Args:
+        topic:        тема презентации
+        content_text: первичный текст/контент презентации (опционально)
+        prompt:       дополнительный промт/контекст для выбора (опционально)
+        style:        желаемый стиль (minimalism, GSB, Axenix...) (опционально)
+        theme:        тема оформления (dark/light) (опционально)
+        sheets_url:   URL Google Sheets с шаблонами (по умолчанию из .env)
+        fallback_url: fallback URL при ошибке (по умолчанию из .env)
 
-    # 2) читаем excel
-    templates = read_templates_excel(args.excel)
+    Returns:
+        URL выбранного шаблона Google Drive
+    """
+    _sheets_url = sheets_url  or TEMPLATES_SHEET_URL
+    _fallback   = fallback_url or FALLBACK_URL
 
-    # 3) готовим контекст
-    content_summary = summarize_content_json(content)
-    topic = args.topic.strip() or "Презентация (тема не указана явно)"
+    if not _sheets_url:
+        log.warning("TEMPLATES_SHEET_URL не задан, возвращаю fallback")
+        return _fallback
 
-    # 4) LLM selection
-    client = build_client(args.base_url, args.api_key, args.timeout)
     try:
-        out = call_llm_select(
-            client=client,
-            model=args.model,
-            topic=topic,
-            content_summary=content_summary,
-            templates=templates,
-        )
-        selected = out.get("selected", "").strip()
+        df        = _download_templates_df(_sheets_url)
+        templates = _parse_templates(df)
 
-        if selected == "NO_MATCH" or not looks_like_url(selected):
-            # fallback
-            print(args.fallback.strip())
-        else:
-            print(selected)
+        content_summary = content_text[:3000] if content_text else ""
+
+        client   = _build_client()
+        selected = _call_llm_select(
+            client          = client,
+            topic           = topic,
+            content_summary = content_summary,
+            templates       = templates,
+            style           = style   or None,
+            theme           = theme   or None,
+            extra_prompt    = prompt  or None,
+        )
+
+        if selected and _is_url(selected):
+            log.info(f"Выбран шаблон: {selected}")
+            return selected
+
+        log.warning(f"LLM вернул невалидный URL: {selected!r}, использую fallback")
+        return _fallback or templates[0]["link"]
 
     except Exception as e:
-        # на любой ошибке — безопасный fallback (и в stdout только ссылка)
         log.error(f"Ошибка выбора шаблона: {e}")
-        print(args.fallback.strip())
+        return _fallback
 
+
+# ── CLI ─────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    ap = argparse.ArgumentParser(description="Выбор шаблона презентации")
+    ap.add_argument("--topic",      default="", help="Тема презентации")
+    ap.add_argument("--content",    default="", help="Путь к файлу с текстом контента (опционально)")
+    ap.add_argument("--prompt",     default="", help="Дополнительный промт (опционально)")
+    ap.add_argument("--style",      default="", help="Желаемый стиль (minimalism, GSB...)")
+    ap.add_argument("--theme",      default="", help="Тема оформления (dark/light)")
+    ap.add_argument("--sheets-url", default="", help="URL Google Sheets с шаблонами")
+    ap.add_argument("--fallback",   default="", help="Fallback URL при ошибке")
+    args = ap.parse_args()
+
+    content_text = ""
+    if args.content and os.path.isfile(args.content):
+        with open(args.content, encoding="utf-8") as f:
+            content_text = f.read()
+
+    url = select_template(
+        topic        = args.topic,
+        content_text = content_text,
+        prompt       = args.prompt,
+        style        = args.style,
+        theme        = args.theme,
+        sheets_url   = args.sheets_url,
+        fallback_url = args.fallback,
+    )
+    print(url)

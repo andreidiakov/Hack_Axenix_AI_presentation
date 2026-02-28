@@ -2,8 +2,8 @@
 Точка входа: тема → content.json → result.pptx
 
 Пайплайн:
-  1. Сервис приоритезации (заглушка) → ссылка на шаблон Google Drive
-  2. Скачиваем шаблон
+  1. template_selector  — выбирает оптимальный шаблон из Google Sheets через LLM
+  2. Скачиваем шаблон с Google Drive
   3. Анализируем шаблон → динамическая структура (template_parser)
   4. Агенты генерируют content.json под эту структуру
   5. Собираем PPTX
@@ -11,17 +11,24 @@
 Запуск:
   python main.py
   python main.py "Ваша тема"
+  python main.py "Ваша тема" --style minimalism --theme dark
+  python main.py "Ваша тема" --prompt "деловая аудитория, строгий стиль"
 """
 
-import sys
+import argparse
 import json
 import logging
-import concurrent.futures
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from agent_system import generate_content_json, call_llm, load_prompt, parse_json_safe
 from generation_pres import build_presentation
 from google_drive import download_template
 from template_parser import build_structure
+from template_selector import select_template
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,49 +37,46 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-TOPIC             = "Будущее искусственного интеллекта в образовании"
-FALLBACK_TEMPLATE = "test.pptx"
-STRUCTURE_PATH    = "structure.json"
+DEFAULT_TOPIC          = "Будущее искусственного интеллекта в образовании"
+FALLBACK_LOCAL_TEMPLATE = os.getenv("FALLBACK_LOCAL_TEMPLATE", "test.pptx")
+STRUCTURE_PATH         = "structure.json"
 
-
-# ── Заглушка сервиса приоритезации ────────────────────────────────────────────
-
-def get_template_link() -> str:
-    """
-    Заглушка сервиса приоритезации.
-
-    TODO: заменить на HTTP-запрос к реальному сервису.
-    Сервис определяет нужный шаблон и возвращает ссылку на Google Drive.
-    """
-    log.info("Prioritization stub: возвращаю ссылку на шаблон...")
-    return "https://docs.google.com/presentation/d/1ead93ZPCCb0IxmGTqBWOMa5MyozVsMzF/edit?usp=drive_link&ouid=102886056468162060057&rtpof=true&sd=true"
-
-
-# ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    topic = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else TOPIC
+    ap = argparse.ArgumentParser(description="Генератор презентаций на основе LLM")
+    ap.add_argument("topic",   nargs="*",  default=[],  help="Тема презентации")
+    ap.add_argument("--style", default=os.getenv("PRESENTATION_STYLE", ""),
+                    help="Желаемый стиль (minimalism, GSB, Axenix...)")
+    ap.add_argument("--theme", default=os.getenv("PRESENTATION_THEME", ""),
+                    help="Тема оформления (dark/light)")
+    ap.add_argument("--prompt", default="",
+                    help="Дополнительный контекст для выбора шаблона")
+    args = ap.parse_args()
+
+    topic = " ".join(args.topic).strip() if args.topic else DEFAULT_TOPIC
     log.info(f"Тема: {topic}")
 
-    # Шаг 1: получаем ссылку на шаблон (параллельно — когда сервис будет реальным
-    # и будет делать тяжёлую работу, тут можно добавить что-то параллельное)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future_link = executor.submit(get_template_link)
-        gdrive_link = future_link.result()
+    # Шаг 1: выбираем шаблон из Google Sheets через LLM
+    log.info("Выбираю шаблон...")
+    gdrive_link = select_template(
+        topic  = topic,
+        style  = args.style,
+        theme  = args.theme,
+        prompt = args.prompt,
+    )
     log.info(f"Шаблон: {gdrive_link}")
 
     # Шаг 2: скачиваем шаблон (fallback → локальный файл)
     try:
         template_path = download_template(gdrive_link, local_path="template.pptx")
     except Exception as e:
-        log.warning(f"Google Drive недоступен ({e}), использую локальный шаблон: {FALLBACK_TEMPLATE}")
-        template_path = FALLBACK_TEMPLATE
+        log.warning(f"Google Drive недоступен ({e}), использую локальный шаблон: {FALLBACK_LOCAL_TEMPLATE}")
+        template_path = FALLBACK_LOCAL_TEMPLATE
 
     # Шаг 3: анализируем шаблон → строим динамическую структуру
     log.info(f"Анализирую шаблон: {template_path}")
     structure = build_structure(template_path, call_llm, load_prompt, parse_json_safe)
 
-    # Сохраняем для отладки
     with open(STRUCTURE_PATH, "w", encoding="utf-8") as f:
         json.dump(structure, f, ensure_ascii=False, indent=2)
     log.info(f"Структура → {STRUCTURE_PATH}")

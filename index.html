@@ -444,6 +444,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
 <input type="hidden" id="apiUrl" value="/api/chat">
 <input type="hidden" id="tempRange" value="0.7">
 <input type="hidden" id="maxTokens" value="8000">
+<input type="hidden" id="language" value="ru">
 
 
 <div class="hero">
@@ -612,7 +613,7 @@ function toggleArch() {
 
 // ── Connection ─────────────────────────────────────────────────────────────
 async function checkConn() {
-  const url = document.getElementById('apiUrl').value.replace('/inference/v1/generate','/health');
+  const url = '/health';
   try {
     const r = await fetch(url, { method:'GET', signal: AbortSignal.timeout(3000) });
     document.getElementById('connDot').className   = r.ok ? 'dot on' : 'dot';
@@ -934,6 +935,10 @@ function doReset() {
   let hijack = false;
   window.fetch = async function (url, options = {}) {
     if (!hijack) return realFetch(url, options);
+    // Не перехватываем GET-запросы (health check и т.д.)
+    if (!options.method || options.method.toUpperCase() !== 'POST') {
+      return realFetch(url, options);
+    }
     try {
       const payload = buildBackendPayload();
       console.log('[PrezAI] request payload:', payload);

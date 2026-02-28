@@ -13,7 +13,7 @@
     {
       "slide_index": 1,
       "slide_type": "BULLETS_6",
-      "description": "Слайд с заголовком и шестью пунктами списка",
+      "description": "Слайд с заголовком и списком из шести пунктов",
       "replacements": {
         "{{TITLE_BULLETS_6}}": "",
         "{{BULLET_1}}": "",
@@ -28,7 +28,7 @@
     {
       "slide_index": 2,
       "slide_type": "BULLETS_4",
-      "description": "Слайд с заголовком и четырьмя пунктами списка",
+      "description": "Слайд с заголовком и списком из четырёх пунктов",
       "replacements": {
         "{{TITLE_BULLETS_4}}": "",
         "{{BULLET_1}}": "",
@@ -41,7 +41,7 @@
     {
       "slide_index": 3,
       "slide_type": "COMPARE",
-      "description": "Слайд сравнения с двумя колонками, заголовками и списками элементов",
+      "description": "Слайд сравнения с двумя колонками и заголовками",
       "replacements": {
         "{{TITLE_COMPARE}}": "",
         "{{LEFT_TITLE}}": "",
@@ -57,7 +57,7 @@
     {
       "slide_index": 4,
       "slide_type": "LEFT_TEXT",
-      "description": "Слайд с заголовком и списком элементов, расположенных слева",
+      "description": "Слайд с заголовком слева и списком элементов",
       "replacements": {
         "{{TITLE_LEFT_TEXT}}": "",
         "{{ITEMS}}": ""
@@ -69,7 +69,7 @@
     {
       "slide_index": 5,
       "slide_type": "RIGHT_TEXT",
-      "description": "Слайд с заголовком и списком элементов, расположенных справа",
+      "description": "Слайд с заголовком справа и списком элементов",
       "replacements": {
         "{{TITLE_RIGHT_TEXT}}": "",
         "{{ITEMS}}": ""
@@ -81,7 +81,7 @@
     {
       "slide_index": 6,
       "slide_type": "THREE_COLUMNS",
-      "description": "Слайд с тремя колонками, каждая имеет подзаголовок и список элементов",
+      "description": "Слайд с тремя колонками, каждый с подзаголовком и пунктами",
       "replacements": {
         "{{TITLE_THREE_COLUMNS}}": "",
         "{{SUBTITLE_COLUMN_1}}": "",
@@ -91,16 +91,12 @@
         "{{ITEM_COLUMN_2}}": "",
         "{{ITEM_COLUMN_3}}": ""
       },
-      "list_fields": [
-        "{{ITEM_COLUMN_1}}",
-        "{{ITEM_COLUMN_2}}",
-        "{{ITEM_COLUMN_3}}"
-      ]
+      "list_fields": []
     },
     {
       "slide_index": 7,
       "slide_type": "TIMELINE",
-      "description": "Слайд с заголовком и пятью точками временной шкалы",
+      "description": "Слайд с заголовком и последовательностью из пяти точек временной шкалы",
       "replacements": {
         "{{TITLE_TIMELINE}}": "",
         "{{POINT_1}}": "",
