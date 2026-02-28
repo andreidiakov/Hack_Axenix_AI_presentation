@@ -9,16 +9,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Geologica:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #06080f;
-  --s1: #0c0f1a;
-  --s2: #131829;
-  --border: #1e2540;
-  --blue: #003087;
-  --blue2: #0050c8;
-  --gold: #f0c040;
-  --text: #e8edf8;
-  --muted: #5a6a8a;
-  --green: #00c98a;
+  --bg: #f4fbf9;          /* общий фон */
+  --s1: #ffffff;          /* карточки */
+  --s2: #eef7f4;          /* поля инпутов */
+  --border: #d6ebe4;      /* границы */
+
+  --blue: #1aa39a;        /* основной mint */
+  --blue2: #148a82;       /* hover / акцент */
+  --gold: #34c7b6;        /* вторичный акцент */
+
+  --text: #1f2d2a;        /* основной текст */
+  --muted: #6f8f88;       /* вторичный текст */
+  --green: #20bfae;       /* успех */
+
   --r: 14px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -411,8 +414,6 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
 
 <header>
   <div class="logo">
-    <!-- ВШБ / ВШЭ логотип SVG -->
-     <a href="https://upload.wikimedia.org/wikipedia/ru/d/d6/Логотип_НИУ_ВШЭ.jpg" target="_blank">
   <img 
     src="https://upload.wikimedia.org/wikipedia/ru/d/d6/Логотип_НИУ_ВШЭ.jpg" 
     class="vshb-logo"
@@ -435,6 +436,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
     </div>
   </div>
   <div class="header-right">
+    
     <span class="pill">Track 1</span>
   </div>
 </header>
