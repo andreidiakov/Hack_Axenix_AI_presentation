@@ -41,7 +41,7 @@
     {
       "slide_index": 3,
       "slide_type": "COMPARE",
-      "description": "Слайд для сравнения двух элементов с заголовком",
+      "description": "Сравнительный слайд с двумя колонками",
       "replacements": {
         "{{TITLE_COMPARE}}": "",
         "{{LEFT_ITEMS}}": "",
@@ -74,7 +74,7 @@
     {
       "slide_index": 6,
       "slide_type": "THREE_COLUMNS",
-      "description": "Слайд с заголовком и тремя колонками с подзаголовками и элементами",
+      "description": "Слайд с тремя колонками и подзаголовками",
       "replacements": {
         "{{TITLE_THREE_COLUMNS}}": "",
         "{{SUBTITLE_COLUMN_1}}": "",
@@ -89,7 +89,7 @@
     {
       "slide_index": 7,
       "slide_type": "TIMELINE",
-      "description": "Слайд с заголовком и временной шкалой из пяти точек",
+      "description": "Слайд с временной шкалой и пятью точками",
       "replacements": {
         "{{TITLE_TIMELINE}}": "",
         "{{POINT_1}}": "",
@@ -103,7 +103,7 @@
     {
       "slide_index": 8,
       "slide_type": "TITLE",
-      "description": "Слайд с заголовком и подзаголовком для завершения",
+      "description": "Заключительный слайд с названием и подзаголовком",
       "replacements": {
         "{{TITLE_CLOSE}}": "",
         "{{SUBTITLE}}": ""
