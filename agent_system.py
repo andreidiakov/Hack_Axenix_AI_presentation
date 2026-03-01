@@ -100,10 +100,15 @@ def structure_to_schema(structure: dict) -> dict:
       fields       : list[str]  — ключи для замены
       list_fields  : list[str]  — ключи, ожидающие список буллетов
     """
-    schema = {}
+    schema: dict = {}
+    type_count: dict[str, int] = {}
     for s in structure.get("slides", []):
-        slide_type = s["slide_type"]
-        schema[slide_type] = {
+        base  = s["slide_type"]
+        count = type_count.get(base, 0) + 1
+        type_count[base] = count
+        # Первое вхождение — без суффикса; последующие — _2, _3 ...
+        key = base if count == 1 else f"{base}_{count}"
+        schema[key] = {
             "description": s.get("description", ""),
             "slide_index": s["slide_index"],
             "fields":      list(s.get("replacements", {}).keys()),
@@ -155,7 +160,16 @@ def run_writer(topic: str,
 
     slide_info  = schema[slide_type]
     fields      = slide_info["fields"]
-    list_fields = slide_info["list_fields"]
+    list_fields = list(slide_info["list_fields"])
+
+    # Авто-определяем list-поля по имени, если schema не указала явно:
+    # {{ITEMS}}, {{LEFT_ITEMS}}, {{RIGHT_ITEMS}} и т.п. — всегда списки
+    _auto = [f for f in fields
+             if f.strip('{}').strip() == 'ITEMS'
+             or f.strip('{}').strip().endswith('_ITEMS')]
+    for f in _auto:
+        if f not in list_fields:
+            list_fields.append(f)
 
     fields_lines    = "\n".join(f'  "{k}"' for k in fields)
     list_hint       = load_prompt("writer_list_format_hint.txt") if list_fields else ""

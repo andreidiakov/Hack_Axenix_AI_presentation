@@ -160,12 +160,16 @@ def replace_in_slide(slide_xml: bytes, replacements: dict) -> bytes:
 
             for ph, items in list_reps.items():
                 if ph in full_text:
+                    if not items:
+                        # Пустой список — оставляем параграф нетронутым,
+                        # иначе XML останется без параграфа и PPTX сломается
+                        break
                     # Удаляем шаблонный параграф и вставляем на его место новые
                     idx = list(txBody).index(para)
                     txBody.remove(para)
                     for i, new_para in enumerate(_build_paragraphs_from_list(para, items)):
                         txBody.insert(idx + i, new_para)
-                    break  # о��ин placeholder за раз, выходим из inner loop
+                    break  # один placeholder за раз, выходим из inner loop
 
     return etree.tostring(tree, xml_declaration=True,
                           encoding='UTF-8', standalone=True)
@@ -308,8 +312,15 @@ def build_presentation(template_path: str,
         content = json.load(f)
 
     # Маппинг: slide_type → 1-based номер файла слайда в шаблоне
-    type_to_tmpl_num = {s['slide_type']: s['slide_index'] + 1
-                        for s in structure['slides']}
+    # Дублирующиеся типы получают суффикс _2, _3 ... (как в structure_to_schema)
+    type_to_tmpl_num: dict[str, int] = {}
+    _type_count: dict[str, int] = {}
+    for s in structure['slides']:
+        base  = s['slide_type']
+        cnt   = _type_count.get(base, 0) + 1
+        _type_count[base] = cnt
+        key   = base if cnt == 1 else f"{base}_{cnt}"
+        type_to_tmpl_num[key] = s['slide_index'] + 1
 
     # Загружаем все файлы шаблона в память
     with zipfile.ZipFile(template_path, 'r') as z:

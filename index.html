@@ -192,7 +192,7 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--blue2);
   box-shadow: 0 0 0 3px rgba(0,80,200,0.12);
 }
-input::placeholder, textarea::placeholder { color: #2a3555; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.55; }
 select option { background: #131829; }
 
 .field { margin-bottom: 18px; }
@@ -853,9 +853,6 @@ function doReset() {
   document.getElementById('genBtnText').textContent = 'Сгенерировать презентацию';
   logLines = []; document.getElementById('logbox').innerHTML = '';
   pptxBlob = null; progress(0);
-  document.getElementById('topic').value = '';
-  document.getElementById('audience').value = '';
-  document.getElementById('requirements').value = '';
 
   const redBtn = document.getElementById('downloadButtonContainer');
   if (redBtn) redBtn.style.display = 'none';
