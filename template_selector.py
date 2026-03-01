@@ -102,6 +102,41 @@ def _download_templates_df(sheets_url: str) -> pd.DataFrame:
     return pd.read_csv(io.StringIO(resp.text))
 
 
+def _filter_df(
+    df: pd.DataFrame,
+    style: Optional[str] = None,
+    theme: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Фильтрует DataFrame по style и theme через pandas.
+    Если после фильтра строк нет — возвращает оригинал.
+    """
+    cols = {c.lower().strip(): c for c in df.columns}
+    style_col = cols.get("style")
+    theme_col = cols.get("theme")
+    result = df.copy()
+
+    if theme and theme_col:
+        filtered = result[result[theme_col].str.strip().str.lower() == theme.lower()]
+        if not filtered.empty:
+            log.info(f"Pandas-фильтр theme={theme!r}: {len(filtered)}/{len(result)} строк")
+            result = filtered
+        else:
+            log.warning(f"Pandas-фильтр theme={theme!r}: 0 совпадений — фильтр не применяется")
+
+    if style and style_col:
+        filtered = result[
+            result[style_col].str.strip().str.lower().str.contains(style.lower(), na=False)
+        ]
+        if not filtered.empty:
+            log.info(f"Pandas-фильтр style={style!r}: {len(filtered)}/{len(result)} строк")
+            result = filtered
+        else:
+            log.warning(f"Pandas-фильтр style={style!r}: 0 совпадений — фильтр не применяется")
+
+    return result if not result.empty else df
+
+
 def _parse_templates(df: pd.DataFrame) -> List[Dict[str, str]]:
     cols = {c.lower().strip(): c for c in df.columns}
 
@@ -209,8 +244,17 @@ def select_template(
         return _fallback
 
     try:
-        df        = _download_templates_df(_sheets_url)
-        templates = _parse_templates(df)
+        df = _download_templates_df(_sheets_url)
+        log.info(f"Загружено шаблонов из таблицы: {len(df)}")
+
+        # Фильтрация в pandas — строго по style и theme
+        df_filtered = _filter_df(df, style=style or None, theme=theme or None)
+        templates   = _parse_templates(df_filtered)
+        valid_links = {t["link"] for t in templates}
+
+        log.info(f"После фильтрации: {len(templates)} шаблонов → отправляю в LLM")
+        for t in templates:
+            log.info(f"  [{t['style']:12} / {t['theme']:5}] {t['link'][:70]}")
 
         content_summary = content_text[:3000] if content_text else ""
 
@@ -224,13 +268,19 @@ def select_template(
             theme           = theme   or None,
             extra_prompt    = prompt  or None,
         )
+        log.info(f"LLM вернул: {selected!r}")
 
-        if selected and _is_url(selected):
-            log.info(f"Выбран шаблон: {selected}")
+        # Жёсткая проверка: URL должен быть из нашего отфильтрованного списка
+        if selected and selected in valid_links:
+            log.info(f"Выбран шаблон (из списка): {selected}")
             return selected
 
-        log.warning(f"LLM вернул невалидный URL: {selected!r}, использую fallback")
-        return _fallback or templates[0]["link"]
+        if selected and _is_url(selected):
+            log.warning(f"LLM вернул URL не из нашего списка: {selected!r} — беру первый из отфильтрованных")
+        else:
+            log.warning(f"LLM вернул невалидный URL: {selected!r} — беру первый из отфильтрованных")
+
+        return templates[0]["link"]
 
     except Exception as e:
         log.error(f"Ошибка выбора шаблона: {e}")

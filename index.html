@@ -489,8 +489,8 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
       <button class="chip on" data-val="professional">Деловой</button>
       <button class="chip" data-val="minimalist">Минималистичный</button>
       <button class="chip" data-val="friendly">Лёгкий и живой</button>
-      <button class="chip" data-val="friendly">Axenix </button>
-      <button class="chip" data-val="friendly">ВШБ</button>
+      <button class="chip" data-val="axenix">Axenix </button>
+      <button class="chip" data-val="vshb">ВШБ</button>
     </div>
   </div>
 
@@ -509,7 +509,17 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
   </div>
 </div>
 
-
+<div class="card" style="margin-top:16px">
+  <p class="slabel">Свой шаблон <span style="color:var(--muted);font-weight:400">(опционально, .pptx)</span></p>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+    <button class="chip" id="uploadBtn" onclick="document.getElementById('templateInput').click()" type="button">
+      📎 Выбрать файл
+    </button>
+    <span id="uploadName" style="color:var(--muted);font-size:13px">не выбран</span>
+    <button id="uploadClear" style="display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1" onclick="clearTemplate()" type="button">✕</button>
+  </div>
+  <input type="file" id="templateInput" accept=".pptx" style="display:none" onchange="onTemplateSelect(event)">
+</div>
 
 <button class="btn-gen" id="genBtn" onclick="generate()">
   <span>▶</span>
@@ -582,11 +592,29 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
 </div>
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let authMode = 'none';
-let selTone  = 'professional';
-let selTheme = 'hse_dark';
-let pptxBlob = null;
-let logLines = [];
+let authMode     = 'none';
+let selTone      = 'professional';
+let selTheme     = 'hse_dark';
+let pptxBlob     = null;
+let logLines     = [];
+let userTemplate = null;  // File object загруженного шаблона
+
+// ── Загрузка шаблона ────────────────────────────────────────────────────────
+function onTemplateSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  userTemplate = file;
+  document.getElementById('uploadName').textContent = file.name;
+  document.getElementById('uploadClear').style.display = '';
+  document.getElementById('uploadBtn').classList.add('on');
+}
+function clearTemplate() {
+  userTemplate = null;
+  document.getElementById('uploadName').textContent = 'не выбран';
+  document.getElementById('uploadClear').style.display = 'none';
+  document.getElementById('uploadBtn').classList.remove('on');
+  document.getElementById('templateInput').value = '';
+}
 
 // ── Chips ──────────────────────────────────────────────────────────────────
 function initChips(id, cb) {
@@ -597,7 +625,18 @@ function initChips(id, cb) {
     });
   });
 }
-initChips('toneChips',  v => selTone  = v);
+initChips('toneChips', v => {
+  selTone = v;
+  const lockDark = (v === 'axenix' || v === 'vshb');
+  const lightChip = document.querySelector('#themeChips .theme-chip[data-val="hse_light"]');
+  const darkChip  = document.querySelector('#themeChips .theme-chip[data-val="hse_dark"]');
+  if (lightChip) lightChip.disabled = lockDark;
+  if (lockDark && darkChip) {
+    document.querySelectorAll('#themeChips .theme-chip').forEach(x => x.classList.remove('on'));
+    darkChip.classList.add('on');
+    selTheme = 'hse_dark';
+  }
+});
 initChips('themeChips', v => selTheme = v);
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -633,7 +672,9 @@ function buildPrompt(opts) {
   const toneDesc = {
     professional: 'деловой профессиональный — чёткие формулировки, без воды',
     minimalist:   'минималистичный — короткие тезисы, никаких лишних слов',
-    friendly:     'лёгкий и живой — доступно, с энергией, но без панибратства'
+    friendly:     'лёгкий и живой — доступно, с энергией, но без панибратства',
+    axenix:       'корпоративный Axenix — строгий, технологичный, с фокусом на результат',
+    vshb:         'академический ВШБ — структурированный, точный, профессиональный'
   };
   return `Ты — специализированный генератор контента для презентаций.
 КРИТИЧЕСКИ ВАЖНО: верни ТОЛЬКО JSON-массив, без текста до/после, без \`\`\`.
@@ -832,16 +873,22 @@ function doReset() {
     const audience = document.getElementById('audience')?.value?.trim() || '';
     const requirements = document.getElementById('requirements')?.value?.trim() || '';
     const slides = parseInt(document.getElementById('slidesCount')?.value || '10', 10);
-    const styleMap = { professional: 'business', minimalist: 'minimal', friendly: 'fun' };
-    const style = styleMap[window.selTone] || 'business';
-    const theme = (window.selTheme === 'hse_light') ? 'light' : 'dark';
+    const styleMap = { professional: 'professional', minimalist: 'minimalism', friendly: 'fun', axenix: 'axenix', vshb: 'gsb' };
+    const style = styleMap[selTone] || 'professional';
+    const theme = (selTheme === 'hse_light') ? 'light' : 'dark';
     const text = [
       `ТЕМА: ${topic}`,
       audience ? `АУДИТОРИЯ: ${audience}` : '',
       requirements ? `ТРЕБОВАНИЯ: ${requirements}` : ''
     ].filter(Boolean).join('\n');
 
-    return { text, style, theme, slides };
+    const fd = new FormData();
+    fd.append('text', text);
+    fd.append('style', style);
+    fd.append('theme', theme);
+    fd.append('slides', String(slides));
+    if (userTemplate) fd.append('template', userTemplate);
+    return fd;
   }
   let hijack = false;
   window.fetch = async function (url, options = {}) {
@@ -858,8 +905,7 @@ function doReset() {
 
       const resp = await realFetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: payload  // FormData — браузер сам ставит Content-Type: multipart/form-data
       });
 
       if (!resp.ok) {

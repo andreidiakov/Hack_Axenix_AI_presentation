@@ -3,8 +3,8 @@ FastAPI-сервер для PrezAI.
 
 Эндпоинты:
   GET  /          → index.html
-  GET  /health    → {"status": "ok"}
-  POST /api/chat  → { text, style?, theme?, slides? } → PPTX-файл (blob)
+  GET  /health    → {\"status\": \"ok\"}
+  POST /api/chat  → multipart/form-data { text, style?, theme?, slides?, template? } → PPTX-файл (blob)
 
 Запуск:
   python api.py
@@ -17,12 +17,12 @@ import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Optional
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel
 
 load_dotenv()
 
@@ -39,41 +39,51 @@ logging.basicConfig(
 )
 log = logging.getLogger("api")
 
-BASE_DIR             = Path(__file__).parent
-FALLBACK_LOCAL       = os.getenv("FALLBACK_LOCAL_TEMPLATE", "test.pptx")
-WORKERS              = int(os.getenv("API_WORKERS", "4"))
+BASE_DIR       = Path(__file__).parent
+_fallback_name = os.getenv("FALLBACK_LOCAL_TEMPLATE", "test.pptx")
+FALLBACK_LOCAL = str(BASE_DIR / _fallback_name)
+WORKERS        = int(os.getenv("API_WORKERS", "4"))
 
 app      = FastAPI(title="PrezAI", version="1.0")
 executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 
-# ── Схема запроса ───────────────────────────────────────────────────────────────
-class GenerateRequest(BaseModel):
-    text:   str
-    style:  str = ""
-    theme:  str = ""
-    slides: int = 10
-
-
 # ── Пайплайн (запускается в потоке) ────────────────────────────────────────────
-def _run_pipeline(req: GenerateRequest, workdir: Path) -> bytes:
+def _run_pipeline(
+    text: str,
+    style: str,
+    theme: str,
+    slides: int,
+    workdir: Path,
+    custom_template_bytes: bytes | None = None,
+) -> bytes:
     tag = workdir.name
 
-    # Шаг 1: выбираем шаблон
-    gdrive_link = select_template(
-        topic  = req.text,
-        style  = req.style,
-        theme  = req.theme,
-    )
-    log.info(f"[{tag}] Шаблон: {gdrive_link}")
+    if custom_template_bytes:
+        # Пользователь загрузил свой шаблон — пропускаем выбор и скачивание
+        template_path = str(workdir / "template.pptx")
+        with open(template_path, "wb") as f:
+            f.write(custom_template_bytes)
+        log.info(f"[{tag}] Используется загруженный шаблон ({len(custom_template_bytes)//1024} KB)")
+    else:
+        # Шаг 1: выбираем шаблон из Google Sheets
+        gdrive_link = select_template(topic=text, style=style, theme=theme)
+        log.info(f"[{tag}] Шаблон выбран: {gdrive_link}")
 
-    # Шаг 2: скачиваем шаблон (fallback → локальный файл)
-    template_local = str(workdir / "template.pptx")
-    try:
-        template_path = download_template(gdrive_link, local_path=template_local)
-    except Exception as e:
-        log.warning(f"[{tag}] Drive недоступен ({e}), использую локальный шаблон")
-        template_path = FALLBACK_LOCAL
+        # Шаг 2: скачиваем шаблон (fallback → локальный файл)
+        template_local = str(workdir / "template.pptx")
+        try:
+            template_path = download_template(gdrive_link, local_path=template_local)
+        except Exception as e:
+            log.warning(f"[{tag}] Drive FAIL для {gdrive_link!r} — {e}, пробую локальный fallback")
+            if not Path(FALLBACK_LOCAL).exists():
+                raise RuntimeError(
+                    f"Шаблон с Google Drive недоступен ({e}), "
+                    f"и локальный fallback '{FALLBACK_LOCAL}' не найден. "
+                    "Убедитесь, что файл шаблона открыт по ссылке (Anyone with the link → Viewer)."
+                )
+            template_path = FALLBACK_LOCAL
+            log.info(f"[{tag}] Использую локальный шаблон: {FALLBACK_LOCAL}")
 
     # Шаг 3: анализируем шаблон → структура
     structure = build_structure(template_path, call_llm, load_prompt, parse_json_safe)
@@ -83,7 +93,7 @@ def _run_pipeline(req: GenerateRequest, workdir: Path) -> bytes:
 
     # Шаг 4: генерируем контент
     content_path = str(workdir / "content.json")
-    generate_content_json(req.text, structure, output_path=content_path)
+    generate_content_json(text, structure, output_path=content_path, n_slides=slides)
 
     # Шаг 5: собираем PPTX
     output_path = workdir / "result.pptx"
@@ -113,28 +123,40 @@ def health():
 
 
 @app.post("/api/chat")
-async def api_chat(req: GenerateRequest):
-    if not req.text.strip():
+async def api_chat(
+    text:     str            = Form(...),
+    style:    str            = Form(""),
+    theme:    str            = Form(""),
+    slides:   int            = Form(10),
+    template: Optional[UploadFile] = File(None),
+):
+    if not text.strip():
         raise HTTPException(status_code=400, detail="text обязателен")
+
+    custom_bytes = await template.read() if template and template.filename else None
+    if custom_bytes:
+        log.info(f"Получен кастомный шаблон: {template.filename!r} ({len(custom_bytes)//1024} KB)")
 
     import asyncio
     loop = asyncio.get_running_loop()
 
     with tempfile.TemporaryDirectory(prefix="prezai_") as tmpdir:
         workdir = Path(tmpdir)
-        log.info(f"[{workdir.name}] Запрос: text={req.text[:60]!r} style={req.style!r} theme={req.theme!r}")
+        log.info(f"[{workdir.name}] Запрос: text={text[:60]!r} style={style!r} theme={theme!r} slides={slides}")
         try:
             pptx_bytes = await loop.run_in_executor(
-                executor, _run_pipeline, req, workdir
+                executor,
+                _run_pipeline,
+                text, style, theme, slides, workdir, custom_bytes,
             )
         except Exception as e:
             log.exception(f"[{workdir.name}] Ошибка пайплайна")
             raise HTTPException(status_code=500, detail=str(e))
 
     return Response(
-        content     = pptx_bytes,
-        media_type  = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers     = {"Content-Disposition": 'attachment; filename="result.pptx"'},
+        content    = pptx_bytes,
+        media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers    = {"Content-Disposition": 'attachment; filename="result.pptx"'},
     )
 
 
@@ -142,13 +164,6 @@ async def api_chat(req: GenerateRequest):
 def root():
     return FileResponse(str(BASE_DIR / "index.html"))
 
-
-@app.get("/{filename}")
-def static_file(filename: str):
-    path = BASE_DIR / filename
-    if path.exists() and path.is_file() and not path.name.startswith("."):
-        return FileResponse(str(path))
-    raise HTTPException(status_code=404, detail="Not found")
 
 @app.get("/download")
 async def download_file():
@@ -160,6 +175,15 @@ async def download_file():
         filename="result.pptx",
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
     )
+
+
+@app.get("/{filename}")
+def static_file(filename: str):
+    path = BASE_DIR / filename
+    if path.exists() and path.is_file() and not path.name.startswith("."):
+        return FileResponse(str(path))
+    raise HTTPException(status_code=404, detail="Not found")
+
 
 # ── Entry point ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

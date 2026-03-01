@@ -114,27 +114,28 @@ def structure_to_schema(structure: dict) -> dict:
 
 # ── Agent 1: PlannerAgent ─────────────────────────────────────────────────────
 
-def run_planner(topic: str, schema: dict) -> list[dict]:
-    log.info("PlannerAgent: запускаю планирование структуры...")
+def run_planner(topic: str, schema: dict, n_slides: int = 7) -> list[dict]:
+    log.info(f"PlannerAgent: планирую {n_slides} слайдов...")
 
     types_desc = json.dumps(
         {k: v["description"] for k, v in schema.items()},
         ensure_ascii=False, indent=2,
     )
 
-    system_prompt = load_prompt("planner_system.txt")
-    user_prompt   = load_prompt("planner_user.txt", topic=topic, types_desc=types_desc)
+    system_prompt = load_prompt("planner_system.txt", n_slides=n_slides)
+    user_prompt   = load_prompt("planner_user.txt", topic=topic, types_desc=types_desc, n_slides=n_slides)
 
     raw = call_llm(system_prompt, user_prompt, temperature=0.6)
     log.debug(f"PlannerAgent ответ:\n{raw}")
 
     data = parse_json_safe(raw)
-    MAX_SLIDES = 9
     plan = data.get("plan") or data.get("slides") or []
     plan = [p for p in plan if p.get("slide_type") in schema]
-    if len(plan) > MAX_SLIDES:
-        log.warning(f"PlannerAgent вернул {len(plan)} слайдов, обрезаю до {MAX_SLIDES}")
-        plan = plan[:MAX_SLIDES]
+    if len(plan) > n_slides:
+        log.warning(f"PlannerAgent вернул {len(plan)} слайдов, обрезаю до {n_slides}")
+        plan = plan[:n_slides]
+    elif len(plan) < n_slides:
+        log.warning(f"PlannerAgent вернул только {len(plan)} слайдов из {n_slides}")
 
     log.info(f"PlannerAgent: план из {len(plan)} слайдов")
     for i, p in enumerate(plan, 1):
@@ -196,7 +197,8 @@ def run_writer(topic: str,
 
 def generate_content_json(topic: str,
                           structure: dict,
-                          output_path: str = None) -> dict:
+                          output_path: str = None,
+                          n_slides: int = 7) -> dict:
     """
     Полный пайплайн: тема + структура шаблона → content.json.
 
@@ -214,7 +216,7 @@ def generate_content_json(topic: str,
     log.info(f"Схема из шаблона: {list(schema.keys())}")
 
     # Шаг 1: Планирование
-    plan = run_planner(topic, schema)
+    plan = run_planner(topic, schema, n_slides=n_slides)
     if not plan:
         raise RuntimeError("PlannerAgent вернул пустой план. Проверь соединение с LLM.")
 

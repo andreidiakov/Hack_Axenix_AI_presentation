@@ -31,17 +31,17 @@
       "description": "Слайд с заголовком и четырьмя буллетами",
       "replacements": {
         "{{TITLE_BULLETS_4}}": "",
+        "{{BULLET_1}}": "",
         "{{BULLET_2}}": "",
         "{{BULLET_3}}": "",
-        "{{BULLET_4}}": "",
-        "{{BULLET_1}}": ""
+        "{{BULLET_4}}": ""
       },
       "list_fields": []
     },
     {
       "slide_index": 3,
       "slide_type": "COMPARE",
-      "description": "Сравнительный слайд с двумя колонками",
+      "description": "Слайд для сравнения двух элементов с заголовком",
       "replacements": {
         "{{TITLE_COMPARE}}": "",
         "{{LEFT_ITEMS}}": "",
@@ -53,8 +53,8 @@
     },
     {
       "slide_index": 4,
-      "slide_type": "BULLETS_1",
-      "description": "Слайд с заголовком и одним списком элементов",
+      "slide_type": "BULLETS_4",
+      "description": "Слайд с заголовком и списком элементов слева",
       "replacements": {
         "{{TITLE_LEFT_TEXT}}": "",
         "{{ITEMS}}": ""
@@ -63,8 +63,8 @@
     },
     {
       "slide_index": 5,
-      "slide_type": "BULLETS_1",
-      "description": "Слайд с заголовком и одним списком элементов",
+      "slide_type": "BULLETS_4",
+      "description": "Слайд с заголовком и списком элементов справа",
       "replacements": {
         "{{TITLE_RIGHT_TEXT}}": "",
         "{{ITEMS}}": ""
@@ -74,7 +74,7 @@
     {
       "slide_index": 6,
       "slide_type": "THREE_COLUMNS",
-      "description": "Слайд с тремя колонками и подзаголовками",
+      "description": "Слайд с заголовком и тремя колонками с подзаголовками и элементами",
       "replacements": {
         "{{TITLE_THREE_COLUMNS}}": "",
         "{{SUBTITLE_COLUMN_1}}": "",
@@ -89,7 +89,7 @@
     {
       "slide_index": 7,
       "slide_type": "TIMELINE",
-      "description": "Слайд с временной шкалой и пятью точками",
+      "description": "Слайд с заголовком и временной шкалой из пяти точек",
       "replacements": {
         "{{TITLE_TIMELINE}}": "",
         "{{POINT_1}}": "",
@@ -103,7 +103,7 @@
     {
       "slide_index": 8,
       "slide_type": "TITLE",
-      "description": "Заключительный слайд с названием и подзаголовком",
+      "description": "Заключительный слайд с заголовком и подзаголовком",
       "replacements": {
         "{{TITLE_CLOSE}}": "",
         "{{SUBTITLE}}": ""
