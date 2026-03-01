@@ -3,130 +3,167 @@
     {
       "slide_type": "TITLE",
       "replacements": {
-        "Title of your Presentation": "Петр 1: Историческое развитие",
-        "A Free Presentation Template": "Презентация посвящена основным этапам жизни и реформам Петра 1"
+        "{{TITLE_TITLE}}": "PrezAI",
+        "{{SUBTITLE}}": "Hack Axenix"
+      }
+    },
+    {
+      "slide_type": "TEAM",
+      "replacements": {
+        "{{MEMBER_1}}": "Дрягина Алина",
+        "{{MEMBER_2}}": "Дьяков Андрей",
+        "{{MEMBER_3}}": "Киселев Эмиль",
+        "{{MEMBER_4}}": "Сапарбеков Эркин",
+        "{{MEMBER_5}}": "Тройнина Алеся",
+        "{{TITLE_TEAM}}": "Наша команда",
+        "{{ROLE_1}}": "Руководитель проекта",
+        "{{ROLE_2}}": "AI‑инженер",
+        "{{ROLE_3}}": "Backend‑разработчик",
+        "{{ROLE_4}}": "Frontend‑разработчик",
+        "{{ROLE_5}}": "UI/UX‑дизайнер"
       }
     },
     {
       "slide_type": "BULLETS_4",
       "replacements": {
-        "Title of your Slide": "Основные этапы жизни Петра 1",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "Петр 1 родился в 1672 году и стал царем в 1682 году. Его правление охватывало важные реформы и изменения в России.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "Он провел множество реформ, включая модернизацию армии и флота, а также создание нового города Санкт-Петербург.",
-        "Date": "Дата: 2023",
-        "Your Footer Here": "Контактная информация: example@example.com"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_2",
-      "replacements": {
-        "Title of your Slide": "Реформы, проведенные Петром 1",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "Петр 1 провел значительные реформы в области государственного управления, армии и флота, образования и культуры.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "Эти реформы изменили облик России и укрепили её позиции на международной арене.",
-        "Date": "2023",
-        "Your Footer Here": "Контактная информация: example@mail.com"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_3",
-      "replacements": {
-        "Title of your Section": "Влияние Петра 1 на российское государство",
-        "Here goes the subtitle of your section": "Фундаментальные изменения в структуре власти",
-        "Date": "2023",
-        "Your Footer Here": "Исторический анализ и выводы"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_4",
-      "replacements": {
-        "Title of your Section": "Культурные изменения при Петре 1",
-        "Here goes the subtitle of your section": "Влияние на искусство и образование",
-        "Date": "2023",
-        "Your Footer Here": "Контактная информация"
+        "{{TITLE_BULLETS_4}}": "Целевая аудитория и причины создания PrezAI",
+        "{{BULLET_1}}": "Студенты используют сервис для быстрого оформления учебных докладов, экономя часы на ручном наборе.",
+        "{{BULLET_2}}": "Преподаватели применяют PrezAI для подготовки лекционных материалов и семинаров, избавляясь от рутинного форматирования.",
+        "{{BULLET_3}}": "Проектные команды генерируют презентации к встречам и отчётам, получая готовый PPTX за минуту.",
+        "{{BULLET_4}}": "Дети и школьники могут создавать простые визуальные отчёты, развивая навыки презентации без технических сложностей."
       }
     },
     {
       "slide_type": "BULLETS_4",
       "replacements": {
-        "Title of your Slide": "Изучение внешней политики Петра 1",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "Внешняя политика Петра 1 была направлена на укрепление позиций России на международной арене. Он стремился к выходу к Балтийскому и Черному морям.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "Петр 1 активно вел войны со Швецией и Турцией, что способствовало расширению территории России. Заключение Ништадтского мира в 1721 году стало важным этапом в истории страны.",
-        "Date": "2023",
-        "Your Footer Here": "Контактная информация: example@example.com"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_2",
-      "replacements": {
-        "Title of your Slide": "Оценка военных достижений Петра 1",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "Петр 1 значительно усилил российскую армию и флот, что позволило России стать одной из ведущих мировых держав. Его военные кампании, включая Северную войну, изменили баланс сил в Европе.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "Военные достижения Петра 1 заложили основы для дальнейшего развития военного дела в России. Он внедрил новые тактики и стратегию, что повысило боеспособность армии.",
-        "Date": "Дата: 2023",
-        "Your Footer Here": "Контактная информация: example@example.com"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_3",
-      "replacements": {
-        "Title of your Section": "Экономические реформы Петра 1",
-        "Here goes the subtitle of your section": "Влияние реформ на экономику России",
-        "Date": "2023",
-        "Your Footer Here": "Контактная информация: example@example.com"
-      }
-    },
-    {
-      "slide_type": "BULLETS_4_4",
-      "replacements": {
-        "Title of your Section": "Наследие Петра 1 для будущих поколений",
-        "Here goes the subtitle of your section": "Влияние реформ на современную Россию",
-        "Date": "2023",
-        "Your Footer Here": "Контактная информация: info@example.com"
+        "{{TITLE_BULLETS_4}}": "Ключевая аудитория и сценарии применения",
+        "{{BULLET_1}}": "Студенты быстро создают презентации для докладов и учебных проектов.",
+        "{{BULLET_2}}": "Преподаватели используют сервис для подготовки лекций, семинаров и учебных материалов.",
+        "{{BULLET_3}}": "Проектные команды генерируют отчёты и презентации для заказчиков в минимальное время.",
+        "{{BULLET_4}}": "Дети и школьники получают яркие и понятные слайды для учебных заданий и конкурсов."
       }
     },
     {
       "slide_type": "BULLETS_6",
       "replacements": {
-        "TITLE": "Спасибо за внимание",
-        "SUBTITLE": "Подводя итоги, благодарим за интерес!",
-        "CONTACT_INFO": [
-          {
-            "type": "Имя",
-            "value": "First / Last Name"
-          },
-          {
-            "type": "Телефон",
-            "value": "(123) 456-7890"
-          },
-          {
-            "type": "Компания",
-            "value": "Your Company"
-          },
-          {
-            "type": "Дата",
-            "value": "Date"
-          },
-          {
-            "type": "Примечание",
-            "value": "Your Footer Here"
-          }
-        ],
-        "Thank You!": "",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel.": "",
-        "Date": "",
-        "Your Footer Here": "",
-        "First / Last Name": "",
-        "(123) 456-7890": "",
-        "Your Company": ""
+        "{{TITLE_BULLETS_6}}": "Возможности сервиса PrezAI",
+        "{{BULLET_1}}": "Выбор светлой или тёмной темы и стилей: деловой, минималистичный, лёгкий, живой, Axenix, ВШБ.",
+        "{{BULLET_2}}": "Генерация готовой презентации в формате PPTX за считанные секунды.",
+        "{{BULLET_3}}": "Настройка параметров через простой ввод: тема + выбранный стиль.",
+        "{{BULLET_4}}": "Автоматический контроль качества: отсутствие орфографических и фактических ошибок, исключение «галлюцинаций».",
+        "{{BULLET_5}}": "Поддержка многократного добавления пользовательских шаблонов без перезапуска сервиса.",
+        "{{BULLET_6}}": "Интеграция с Miro для визуального планирования и последующего экспорта."
       }
     },
     {
-      "slide_type": "BULLETS_4",
+      "slide_type": "RIGHT_TEXT",
       "replacements": {
-        "Title of your Slide": "Основные выводы о Петре 1",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "Петр 1 был ключевой фигурой в истории России, осуществивший множество реформ, которые изменили страну.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "Его наследие продолжает влиять на современную Россию, формируя её культурные и политические основы.",
-        "Date": "2023-10-10",
-        "Your Footer Here": "Контактная информация: example@mail.com"
+        "{{TITLE_RIGHT_TEXT}}": "Механика работы сервиса",
+        "{{ITEMS}}": [
+          {
+            "type": "text",
+            "value": "Схема демонстрирует основные этапы работы сервиса."
+          },
+          {
+            "type": "bullet",
+            "value": "Ввод темы и настроек пользователем"
+          },
+          {
+            "type": "bullet",
+            "value": "Автоматическая генерация слайдов"
+          },
+          {
+            "type": "bullet",
+            "value": "Контроль качества и экспорт в PPTX"
+          }
+        ]
+      }
+    },
+    {
+      "slide_type": "BULLETS_6",
+      "replacements": {
+        "{{TITLE_BULLETS_6}}": "Структура системного промпта",
+        "{{BULLET_1}}": "Планирование структуры: модель формирует каркас презентации, задавая типы слайдов, их порядок и точное количество.",
+        "{{BULLET_2}}": "Анализ шаблона PPTX: система определяет, какие поля и списки необходимо заполнить для выбранного шаблона.",
+        "{{BULLET_3}}": "Выбор визуального шаблона: подбирается стиль (тёмный или светлый) и тема оформления в соответствии с настройками пользователя.",
+        "{{BULLET_4}}": "Генерация контента: текст создаётся строго по заданной теме и формату, без лишних деталей.",
+        "{{BULLET_5}}": "Форматный контроль: проверяется отсутствие мусора, ошибок и недопустимых символов, гарантируя чистый JSON‑вывод.",
+        "{{BULLET_6}}": "Финальный экспорт: готовая презентация сохраняется в формате PPTX и готова к использованию."
+      }
+    },
+    {
+      "slide_type": "COMPARE",
+      "replacements": {
+        "{{TITLE_COMPARE}}": "Преимущества и возможности улучшения",
+        "{{LEFT_TITLE}}": "Преимущества PrezAI",
+        "{{RIGHT_TITLE}}": "Потенциал доработок",
+        "{{LEFT_ITEMS}}": [
+          {
+            "type": "text",
+            "value": "Сравнительный обзор преимуществ"
+          },
+          {
+            "type": "bullet",
+            "value": "Генерация PPTX за минуту"
+          },
+          {
+            "type": "bullet",
+            "value": "Управление темой и настройками"
+          },
+          {
+            "type": "bullet",
+            "value": "Создание презентации одним нажатием"
+          },
+          {
+            "type": "bullet",
+            "value": "Контроль ошибок и отсутствие мусора"
+          }
+        ],
+        "{{RIGHT_ITEMS}}": [
+          {
+            "type": "text",
+            "value": "Сравнительный обзор доработок"
+          },
+          {
+            "type": "bullet",
+            "value": "Расширение стилистических шаблонов"
+          },
+          {
+            "type": "bullet",
+            "value": "Автоматическое добавление изображений"
+          },
+          {
+            "type": "bullet",
+            "value": "Увеличение скорости генерации"
+          },
+          {
+            "type": "bullet",
+            "value": "Поддержка многоканального экспорта"
+          }
+        ]
+      }
+    },
+    {
+      "slide_type": "RIGHT_TEXT",
+      "replacements": {
+        "{{TITLE_RIGHT_TEXT}}": "Ссылка на репозиторий проекта",
+        "{{ITEMS}}": [
+          {
+            "type": "bullet",
+            "value": "GitHub: https://github.com/andreidiakov/Hack_Axenix_AI_presentation/tree/main"
+          },
+          {
+            "type": "bullet",
+            "value": "См. README для инструкций по использованию"
+          }
+        ]
+      }
+    },
+    {
+      "slide_type": "CLOSE",
+      "replacements": {
+        "{{TITLE_CLOSE}}": "Спасибо за внимание",
+        "{{SUBTITLE}}": "PrezAI ускоряет создание качественных презентаций"
       }
     }
   ]

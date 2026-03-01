@@ -56,6 +56,7 @@ def _run_pipeline(
     slides: int,
     workdir: Path,
     custom_template_bytes: bytes | None = None,
+    team_members: list | None = None,
 ) -> bytes:
     tag = workdir.name
 
@@ -102,6 +103,7 @@ def _run_pipeline(
         structure_path = structure_path,
         content_path   = content_path,
         output_path    = str(output_path),
+        team_members   = team_members,
     )
 
     pptx_bytes = output_path.read_bytes()
@@ -124,11 +126,12 @@ def health():
 
 @app.post("/api/chat")
 async def api_chat(
-    text:     str            = Form(...),
-    style:    str            = Form(""),
-    theme:    str            = Form(""),
-    slides:   int            = Form(10),
-    template: Optional[UploadFile] = File(None),
+    text:         str            = Form(...),
+    style:        str            = Form(""),
+    theme:        str            = Form(""),
+    slides:       int            = Form(10),
+    template:     Optional[UploadFile] = File(None),
+    team_members: str            = Form(""),
 ):
     if not text.strip():
         raise HTTPException(status_code=400, detail="text обязателен")
@@ -136,6 +139,14 @@ async def api_chat(
     custom_bytes = await template.read() if template and template.filename else None
     if custom_bytes:
         log.info(f"Получен кастомный шаблон: {template.filename!r} ({len(custom_bytes)//1024} KB)")
+
+    parsed_team: list | None = None
+    if team_members.strip():
+        try:
+            parsed_team = json.loads(team_members)
+            log.info(f"Команда: {len(parsed_team)} участников")
+        except Exception as e:
+            log.warning(f"Не удалось распарсить team_members: {e}")
 
     import asyncio
     loop = asyncio.get_running_loop()
@@ -147,7 +158,7 @@ async def api_chat(
             pptx_bytes = await loop.run_in_executor(
                 executor,
                 _run_pipeline,
-                text, style, theme, slides, workdir, custom_bytes,
+                text, style, theme, slides, workdir, custom_bytes, parsed_team,
             )
         except Exception as e:
             log.exception(f"[{workdir.name}] Ошибка пайплайна")

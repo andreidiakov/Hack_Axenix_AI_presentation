@@ -5,73 +5,138 @@
       "slide_type": "TITLE",
       "description": "Титульный слайд с названием и подзаголовком",
       "replacements": {
-        "Title of your Presentation": "",
-        "A Free Presentation Template": ""
+        "{{SUBTITLE}}": "",
+        "{{TITLE_TITLE}}": ""
       },
       "list_fields": []
     },
     {
       "slide_index": 1,
-      "slide_type": "BULLETS_4",
-      "description": "Слайд с заголовком и несколькими текстовыми блоками, включая дату и подвал.",
+      "slide_type": "TEAM",
+      "description": "Слайд с представлением команды, показывающий имена и роли участников",
       "replacements": {
-        "Title of your Slide": "",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "",
-        "Date": "",
-        "Your Footer Here": ""
+        "{{MEMBER_1}}": "",
+        "{{MEMBER_2}}": "",
+        "{{MEMBER_3}}": "",
+        "{{MEMBER_4}}": "",
+        "{{MEMBER_5}}": "",
+        "{{TITLE_TEAM}}": "",
+        "{{ROLE_1}}": "",
+        "{{ROLE_2}}": "",
+        "{{ROLE_3}}": "",
+        "{{ROLE_4}}": "",
+        "{{ROLE_5}}": ""
       },
       "list_fields": []
     },
     {
       "slide_index": 2,
-      "slide_type": "BULLETS_4",
-      "description": "Слайд с заголовком и несколькими текстовыми блоками, включая дату и подвал.",
+      "slide_type": "BULLETS_6",
+      "description": "Слайд с заголовком и шестью пунктами списка",
       "replacements": {
-        "Title of your Slide": "",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel. Non blandit massa enim nec dui nunc mattis enim. Fermentum et sollicitudin ac orci phasellus egestas tellus.": "",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.": "",
-        "Date": "",
-        "Your Footer Here": ""
+        "{{TITLE_BULLETS_6}}": "",
+        "{{BULLET_1}}": "",
+        "{{BULLET_2}}": "",
+        "{{BULLET_3}}": "",
+        "{{BULLET_4}}": "",
+        "{{BULLET_5}}": "",
+        "{{BULLET_6}}": ""
       },
       "list_fields": []
     },
     {
       "slide_index": 3,
       "slide_type": "BULLETS_4",
-      "description": "Слайд с заголовком и подзаголовком, включая дату и подвал.",
+      "description": "Слайд с заголовком и четырьмя пунктами списка",
       "replacements": {
-        "Title of your Section": "",
-        "Here goes the subtitle of your section": "",
-        "Date": "",
-        "Your Footer Here": ""
+        "{{TITLE_BULLETS_4}}": "",
+        "{{BULLET_1}}": "",
+        "{{BULLET_2}}": "",
+        "{{BULLET_3}}": "",
+        "{{BULLET_4}}": ""
       },
       "list_fields": []
     },
     {
       "slide_index": 4,
-      "slide_type": "BULLETS_4",
-      "description": "Слайд с заголовком и подзаголовком, включая дату и подвал.",
+      "slide_type": "COMPARE",
+      "description": "Слайд сравнения с заголовком и двумя колонками элементов",
       "replacements": {
-        "Title of your Section": "",
-        "Here goes the subtitle of your section": "",
-        "Date": "",
-        "Your Footer Here": ""
+        "{{TITLE_COMPARE}}": "",
+        "{{LEFT_ITEMS}}": "",
+        "{{LEFT_TITLE}}": "",
+        "{{RIGHT_ITEMS}}": "",
+        "{{RIGHT_TITLE}}": ""
+      },
+      "list_fields": [
+        "{{LEFT_ITEMS}}",
+        "{{RIGHT_ITEMS}}"
+      ]
+    },
+    {
+      "slide_index": 5,
+      "slide_type": "RIGHT_TEXT",
+      "description": "Слайд с заголовком и списком элементов, расположенных справа",
+      "replacements": {
+        "{{TITLE_RIGHT_TEXT}}": "",
+        "{{ITEMS}}": ""
+      },
+      "list_fields": [
+        "{{ITEMS}}"
+      ]
+    },
+    {
+      "slide_index": 6,
+      "slide_type": "LEFT_TEXT",
+      "description": "Слайд с заголовком и списком элементов, расположенных слева",
+      "replacements": {
+        "{{TITLE_LEFT_TEXT}}": "",
+        "{{ITEMS}}": ""
+      },
+      "list_fields": [
+        "{{ITEMS}}"
+      ]
+    },
+    {
+      "slide_index": 7,
+      "slide_type": "THREE_COLUMNS",
+      "description": "Слайд с тремя колонками, каждая содержит подзаголовок и список элементов",
+      "replacements": {
+        "{{SUBTITLE_COLUMN_1}}": "",
+        "{{TITLE_THREE_COLUMNS}}": "",
+        "{{SUBTITLE_COLUMN_2}}": "",
+        "{{SUBTITLE_COLUMN_3}}": "",
+        "{{ITEM_COLUMN_1}}": "",
+        "{{ITEM_COLUMN_2}}": "",
+        "{{ITEM_COLUMN_3}}": ""
+      },
+      "list_fields": [
+        "{{ITEM_COLUMN_1}}",
+        "{{ITEM_COLUMN_2}}",
+        "{{ITEM_COLUMN_3}}"
+      ]
+    },
+    {
+      "slide_index": 8,
+      "slide_type": "TIMELINE",
+      "description": "Слайд с заголовком и пятью точками временной шкалы",
+      "replacements": {
+        "{{TITLE_TIMELINE}}": "",
+        "{{POINT_1}}": "",
+        "{{POINT_2}}": "",
+        "{{POINT_3}}": "",
+        "{{POINT_4}}": "",
+        "{{POINT_5}}": ""
       },
       "list_fields": []
     },
     {
-      "slide_index": 5,
-      "slide_type": "BULLETS_6",
-      "description": "Слайд с благодарностью и контактной информацией.",
+      "slide_index": 9,
+      "slide_type": "CLOSE",
+      "description": "Финальный слайд с прощальным заголовком и подзаголовком",
       "replacements": {
-        "Thank You!": "",
-        "Lorem ipsum dolor sit amet, tollit epicuri est ex, exerci accumsan singulis ei mel.": "",
-        "Date": "",
-        "Your Footer Here": "",
-        "First / Last Name": "",
-        "(123) 456-7890": "",
-        "Your Company": ""
+        "{{SUBTITLE}}": "",
+        "{{TITLE_CLOSE}}": ""
       },
       "list_fields": []
     }

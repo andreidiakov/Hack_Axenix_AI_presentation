@@ -401,10 +401,27 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
 .toast.open { display: block; animation: sup 0.3s ease; }
 @keyframes sup { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+.team-member-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 28px;
+  gap: 8px;
+  align-items: center;
+}
+.team-member-row input { margin: 0; }
+.team-remove-btn {
+  background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-size: 18px; line-height: 1;
+  padding: 0; transition: color 0.15s;
+}
+.team-remove-btn:hover { color: #e74c3c; }
+
 @media (max-width: 580px) {
   .grid2 { grid-template-columns: 1fr; }
   .hero h1 { font-size: 24px; }
   .card { padding: 18px; }
+  .team-member-row { grid-template-columns: 1fr 28px; }
+  .team-member-row input:nth-child(2) { grid-column: 1; }
 }
 </style>
 </head>
@@ -504,6 +521,25 @@ input[type="range"] { width: 100%; accent-color: var(--blue2); margin-top: 6px; 
       <button class="theme-chip" data-val="hse_light">
         <div class="theme-dot" style="background:#ffffff;border:1px solid #003f8a"></div>
         Светлая
+      </button>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:18px; margin-bottom:0; padding-top:16px; border-top:1px solid var(--border);">
+    <label style="display:flex; align-items:center; gap:10px; margin:0; cursor:default;">
+      <input type="checkbox" id="teamToggle" disabled
+        style="width:16px;height:16px;accent-color:var(--blue2);cursor:not-allowed;flex-shrink:0;">
+      <span style="font-size:13px; font-weight:500; color:var(--muted);" id="teamCheckLabel">
+        👥 Добавить слайд команды
+      </span>
+      <span id="teamLockHint" style="font-size:11px; color:var(--muted); margin-left:4px;">(только для Axenix / GSB)</span>
+    </label>
+
+    <div id="teamMembersSection" style="display:none; margin-top:14px;">
+      <div id="teamMembersList" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <button type="button" id="addMemberBtn" onclick="addTeamMember()"
+        class="chip" style="margin-top:10px; font-size:12px;">
+        + Добавить участника
       </button>
     </div>
   </div>
@@ -627,17 +663,74 @@ function initChips(id, cb) {
 }
 initChips('toneChips', v => {
   selTone = v;
-  const lockDark = (v === 'axenix' || v === 'vshb');
+  const isTeamTemplate = (v === 'axenix' || v === 'vshb');
+
+  // Lock dark theme for axenix/vshb
   const lightChip = document.querySelector('#themeChips .theme-chip[data-val="hse_light"]');
   const darkChip  = document.querySelector('#themeChips .theme-chip[data-val="hse_dark"]');
-  if (lightChip) lightChip.disabled = lockDark;
-  if (lockDark && darkChip) {
+  if (lightChip) lightChip.disabled = isTeamTemplate;
+  if (isTeamTemplate && darkChip) {
     document.querySelectorAll('#themeChips .theme-chip').forEach(x => x.classList.remove('on'));
     darkChip.classList.add('on');
     selTheme = 'hse_dark';
   }
+
+  // Show / enable team toggle only for axenix / vshb
+  const toggle     = document.getElementById('teamToggle');
+  const lockHint   = document.getElementById('teamLockHint');
+  const checkLabel = document.getElementById('teamCheckLabel');
+
+  toggle.disabled = !isTeamTemplate;
+  toggle.style.cursor = isTeamTemplate ? 'pointer' : 'not-allowed';
+  checkLabel.style.color = isTeamTemplate ? 'var(--text)' : 'var(--muted)';
+  lockHint.style.display = isTeamTemplate ? 'none' : 'inline';
+
+  if (!isTeamTemplate) {
+    toggle.checked = false;
+    document.getElementById('teamMembersSection').style.display = 'none';
+  }
 });
 initChips('themeChips', v => selTheme = v);
+
+// ── Team members ────────────────────────────────────────────────────────────
+let _memberSeq = 0;
+
+document.getElementById('teamToggle').addEventListener('change', function () {
+  const section = document.getElementById('teamMembersSection');
+  section.style.display = this.checked ? 'block' : 'none';
+  if (this.checked && document.querySelectorAll('.team-member-row').length === 0) {
+    addTeamMember();
+  }
+});
+
+function addTeamMember() {
+  if (document.querySelectorAll('.team-member-row').length >= 6) return;
+  _memberSeq++;
+  const id = _memberSeq;
+  const row = document.createElement('div');
+  row.className = 'team-member-row';
+  row.dataset.memberId = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Имя" data-field="name">
+    <input type="text" placeholder="Роль / должность" data-field="role">
+    <button type="button" class="team-remove-btn" onclick="removeTeamMember(this)" title="Удалить">✕</button>
+  `;
+  document.getElementById('teamMembersList').appendChild(row);
+}
+
+function removeTeamMember(btn) {
+  btn.closest('.team-member-row').remove();
+}
+
+function getTeamMembers() {
+  const members = [];
+  document.querySelectorAll('.team-member-row').forEach(row => {
+    const name = row.querySelector('[data-field="name"]').value.trim();
+    const role = row.querySelector('[data-field="role"]').value.trim();
+    if (name || role) members.push({ name, role });
+  });
+  return members;
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────
 function setAuth(m) {
@@ -885,6 +978,11 @@ function doReset() {
     fd.append('theme', theme);
     fd.append('slides', String(slides));
     if (userTemplate) fd.append('template', userTemplate);
+
+    const teamMembers = getTeamMembers();
+    if (teamMembers.length > 0) {
+      fd.append('team_members', JSON.stringify(teamMembers));
+    }
     return fd;
   }
   let hijack = false;

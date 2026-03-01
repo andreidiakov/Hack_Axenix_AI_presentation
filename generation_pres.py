@@ -287,12 +287,37 @@ def _rebuild_content_types(template_ct_xml: bytes, num_slides: int) -> bytes:
                           encoding='UTF-8', standalone=True)
 
 
+# ── Team slide helpers ────────────────────────────────────────────────────────
+
+def _build_team_slide_content(team_members: list, replacements_template: dict | None = None) -> dict:
+    """
+    Формирует content-запись для слайда TITLE_TEAM из списка участников.
+
+    Плейсхолдеры:
+      {{TITLE_TEAM}}  — заголовок слайда
+      {{MEMBER_N}}    — имя участника
+      {{ROLE_N}}      — роль / должность
+    """
+    # Стартуем с пустых значений для всех плейсхолдеров шаблона
+    replacements: dict = {k: '' for k in (replacements_template or {})}
+    replacements['{{TITLE_TEAM}}'] = 'Команда проекта'
+
+    for i, member in enumerate(team_members[:6], 1):
+        name = (member.get('name') or '').strip()
+        role = (member.get('role') or '').strip()
+        replacements[f'{{{{MEMBER_{i}}}}}'] = name
+        replacements[f'{{{{ROLE_{i}}}}}']   = role
+
+    return {'slide_type': 'TITLE_TEAM', 'replacements': replacements}
+
+
 # ── Main builder ──────────────────────────────────────────────────────────────
 
 def build_presentation(template_path: str,
                        structure_path: str,
                        content_path:   str,
-                       output_path:    str):
+                       output_path:    str,
+                       team_members:   list | None = None):
     """
     Собирает итоговую презентацию из шаблона по content.json.
 
@@ -310,6 +335,32 @@ def build_presentation(template_path: str,
         structure = json.load(f)
     with open(content_path, encoding='utf-8') as f:
         content = json.load(f)
+
+    # Обработка слайда команды
+    # Сначала ищем шаблонный слайд TITLE_TEAM в structure (чтобы знать его плейсхолдеры)
+    team_repl_tmpl: dict | None = None
+    for _s in structure.get('slides', []):
+        if _s['slide_type'] == 'TITLE_TEAM':
+            team_repl_tmpl = dict(_s.get('replacements', {}))
+            break
+
+    slides_list = content.get('slides', [])
+
+    if team_repl_tmpl is not None:
+        # Удаляем любой TITLE_TEAM, который LLM мог сгенерировать сам
+        slides_list = [s for s in slides_list if s.get('slide_type') != 'TITLE_TEAM']
+
+        non_empty = [m for m in (team_members or []) if (m.get('name') or m.get('role'))]
+        if non_empty:
+            # Подставляем реальные данные и вставляем вторым
+            team_slide = _build_team_slide_content(non_empty, team_repl_tmpl)
+            insert_pos = 1 if len(slides_list) >= 1 else 0
+            slides_list.insert(insert_pos, team_slide)
+            print(f'[OK] Слайд команды вставлен на позицию {insert_pos + 1} ({len(non_empty)} уч.)')
+        else:
+            print('[OK] Команда не заполнена — слайд TITLE_TEAM исключён')
+
+        content['slides'] = slides_list
 
     # Маппинг: slide_type → 1-based номер файла слайда в шаблоне
     # Дублирующиеся типы получают суффикс _2, _3 ... (как в structure_to_schema)
